@@ -30,6 +30,24 @@ echo "── decisionLog"
 if [ -f "$KIT/decisionLog.md" ]; then echo "ok: decisionLog.md present"
 else echo "note: no decisionLog.md yet (optional per-repo ADR — create on first durable decision)"; fi
 
+# NEB-1375: the governance fragment's version footer must match VERSION —
+# a stale footer means the fragment (or the stamp) didn't ship with the bump.
+echo "── version stamp"
+ver="$(cat "$KIT/VERSION")"
+checked=0
+for gf in "$KIT/AGENTS.devkit.md" "$ROOT/AGENTS.neyra-devkit.md"; do
+  [ -f "$gf" ] || continue
+  checked=1
+  foot="$(grep -o 'kit-version: [0-9][0-9.]*' "$gf" | head -1 | cut -d' ' -f2)"
+  if [ "$foot" = "$ver" ]; then
+    echo "ok: $(basename "$gf") footer matches VERSION ($ver)"
+  else
+    echo "FAIL: $(basename "$gf") footer says '${foot:-none}' but VERSION is '$ver' — update the footer with the bump (EVOLVING-THE-KIT §4)"
+    fail=1
+  fi
+done
+[ "$checked" -eq 0 ] && echo "note: no governance fragment found to check"
+
 echo "── multi-tool surfaces"
 if [ -f "$KIT/hooks/lib/host-io.sh" ]; then echo "ok: host I/O shim present (Claude Code + Cursor + Codex)"
 else echo "WARN: hooks/lib/host-io.sh missing — multi-host hooks will fail to source (re-run install.sh)"; fi

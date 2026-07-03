@@ -48,6 +48,11 @@ This operationalizes the `Self-Improvement Rule` in AGENTS.md as a triggerable l
 | A gate that should be enforced, not hoped for | propose a hook / matrix add-on — don't hand-enforce |
 | A skill that didn't fire or over-fired | fix its `description` to a pure "when to load" trigger |
 
+- **Consumer-demand test (NEB-1406):** an explicit user/consumer statement of
+  need satisfies the demand test by itself — never reject a routing solely for
+  "no consumer asked" when the requester IS the consumer. Organic evidence is
+  for prioritization, not for permission.
+
 **Success criteria**
 - The change is routed to exactly one surface, with a one-line justification.
 
