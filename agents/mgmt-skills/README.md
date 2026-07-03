@@ -20,6 +20,7 @@ workspace's `settings/` (`CONNECTORS.md`, `facts/`, `private/`).
 | [delivery-audit](delivery-audit/SKILL.md) | Period audit: investment distribution, diff-vs-ticket honesty check, stage bottleneck, business-value lines, hygiene violations |
 | [portfolio-pmo](portfolio-pmo/SKILL.md) | Cross-team portfolio: dependency graph, deduplicated RAID register, gated batch planning with mid-flight re-check, RAG rollup, live Q&A |
 | [goal-okr](goal-okr/SKILL.md) | OKRs from strategy: falsifiable KRs (EARS), run-rate auto-status, both-direction challenge protocol, private personal mode with hard trust gates |
+| [goal-alignment](goal-alignment/SKILL.md) | Work↔goal traceability: direct/enabling/KTLO/orphan, falsifiable impact estimates graded next cycle, coverage + starved goals, ranked swaps |
 
 ## Data flow
 
@@ -31,6 +32,7 @@ team-health-check ─┐
 delivery-audit ────┼─► status-report-shape ─► page / email digest
 portfolio-pmo ─────┘
 goal-okr ──► tracker (anchored OKRs) + settings/private/ (personal mode only)
+goal-alignment ──► work↔KR trace matrix + graded impact estimates (reads goal-okr + tracker)
 ```
 
 ## Hard boundaries

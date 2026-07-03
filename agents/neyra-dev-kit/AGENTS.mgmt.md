@@ -22,6 +22,7 @@ are graded before new ones are written.
 | delivery-audit | delivery-audit | "what did the team ship", period review, investment distribution |
 | portfolio-pmo | portfolio-pmo | cross-team planning, dependencies, RAID review, portfolio status |
 | goal-okr | goal-okr | OKR set/update/grade, run-rate, goal challenge, 1:1 personal goals |
+| goal-alignment | goal-alignment | work↔goal traceability, impact estimates, alignment review before committing a plan |
 | status-report-shape | _(called by the above)_ | rendering stage of any recurring report |
 
 ## Hard boundaries (non-negotiable)

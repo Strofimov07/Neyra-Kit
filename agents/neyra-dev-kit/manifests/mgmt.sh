@@ -1,7 +1,7 @@
 KIT_NAME="mgmt"
 SKILLS_SRC="agents/mgmt-skills"
 SKILLS=( ALL )
-PORTABLE_AGENTS=( team-health-check delivery-audit portfolio-pmo goal-okr kit-onboarding )
+PORTABLE_AGENTS=( team-health-check delivery-audit portfolio-pmo goal-okr goal-alignment kit-onboarding )
 TEMPLATED_AGENTS=( linear-router )
 MCP_SERVERS=( none )
 GOVERNANCE_TMPL="AGENTS.mgmt.md"

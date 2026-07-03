@@ -11,6 +11,7 @@ install.sh from agents/neyra-dev-kit/templates/, not stored here.
 | [code-reviewer](code-reviewer.md) | Senior code reviewer for Swift/iOS and Python/Django diffs. Performs a simplify-pass focused on reuse, redundant state, scope creep, and avo |
 | [delivery-audit](delivery-audit.md) | Period audit of what a team actually shipped, in business terms — investment distribution (feature/bug/tech-debt/KTLO/unplanned), diff-vs- |
 | [delivery-planner](delivery-planner.md) | Decomposes work into executable units, slices roadmaps, enforces task-anchor discipline (every issue has a project, owner, and clear DoD), a |
+| [goal-alignment](goal-alignment.md) | Traces active and planned work to the goal set (Objectives/KRs) and estimates each item's expected effect on its goal — direct/enabling/KT |
 | [goal-okr](goal-okr.md) | Goal-setting and OKR tracking for a senior leader — forms OKRs from strategy and projects, falsifiable KRs (EARS), 0.0–1.0 grading, expe |
 | [growth-analytics](growth-analytics.md) | Growth and product analytics framing — metrics, experiments, proxy instrumentation, funnel thinking, retention/growth loops. |
 | [implementation-loop](implementation-loop.md) | Default coding loop — inspect → plan → patch → verify, minimal diffs, explicit assumptions, strong repo-pattern reuse. Use for most  |
