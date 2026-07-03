@@ -18,8 +18,10 @@ install.sh from agents/neyra-dev-kit/templates/, not stored here.
 | [kit-evolution](kit-evolution.md) | Closes the kit's learning loop — turns friction, corrections, and skipped gates from real work into a concrete, validated kit change (new  |
 | [kit-onboarding](kit-onboarding.md) | Interactive kit setup interview after install — fills everything the kit needs to work at full quality in this repo/workspace: install con |
 | [knowledge-graph](knowledge-graph.md) | Treats durable project knowledge as a typed memory graph (typed nodes + typed edges + single-source-per-fact + freshness contract + code→n |
+| [migration-safety](migration-safety.md) | Reviews database schema migrations for production safety — rolling-deploy backward compatibility (expand/contract), lock behavior on large |
 | [parallel-lanes](parallel-lanes.md) | Gives each simultaneously-running agent its own isolated lane — one git worktree (or at least one branch + explicit-path commits), one Lin |
 | [portfolio-pmo](portfolio-pmo.md) | Portfolio-level PMO for cross-team planning — dependency graph from the tracker, deduplicated RAID register (Risks/Assumptions/Issues/Depe |
+| [post-merge-watch](post-merge-watch.md) | Watches CI/CD after a human-approved merge lands — polls the triggered pipelines for a bounded window, surfaces failures in the same turn, |
 | [product-brainstormer](product-brainstormer.md) | Frames problems before solutions — separates symptoms from root cause, produces explicit hypotheses and assumptions, maintains an open-que |
 | [receiving-code-review](receiving-code-review.md) | Disciplined consumption of code-review findings — read without reacting, verify each against the actual code, then implement by severity ( |
 | [regression-scout](regression-scout.md) | Scans for likely regressions adjacent to a change — permissions, loading/empty/error states, caching, polling, navigation return paths, an |
