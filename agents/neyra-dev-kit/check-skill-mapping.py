@@ -17,7 +17,7 @@ import sys
 # dev-skills intentionally without an auto-invocable subagent (documented manual).
 # batch-migration stays manual: it's approval-gated (only on explicit delegation).
 # goal-mode is opt-in autonomous orchestration — invoked explicitly, never auto.
-MANUAL = {"batch-migration", "goal-mode"}
+MANUAL = {"batch-migration", "goal-mode", "backlog-fleet"}
 # Rendered per-repo by install.sh only when enabled in the consumer's config —
 # keep in sync with TEMPLATED_AGENTS in manifests/*.sh.
 TEMPLATED = {"linear-router", "localization-checker", "contract-checker"}

@@ -70,10 +70,17 @@ Not guidelines. Violating any one can silently corrupt a sibling's work.
 - Any cross-lane interface (a signature one lane produces and another consumes)
   is declared in the plan's **Interfaces** section before dispatch — see
   `writing-plans`.
+- **Mid-flight independence re-check (NEB-1402):** the pre-dispatch
+  independence assumption expires when your real analysis starts. The moment
+  your spec/analysis work surfaces a file, table, or contract a sibling
+  lane's scope claims — report `BLOCKED: dependency-conflict` immediately so
+  the orchestrator pauses the batch for re-approval. Never absorb the
+  overlap into your own lane.
 
 **Success criteria**
 - The lane's branch has a narrow, clean history touching only its own files.
 - Implemented signatures match the up-front declared interfaces.
+- Discovered cross-lane overlaps were reported as BLOCKED, not worked around.
 
 ### 4. Coordinate and integrate
 
@@ -116,6 +123,9 @@ When a lane is ready:
   fragile; you will not reliably restore them.
 - "Same user's agents, so it's fine." Same machine, same dirty tree — the
   collision mechanics are identical to a two-developer shared checkout.
+- "The overlap I just discovered is small — I'll handle it in my lane." The
+  independence assumption was the dispatch's approval basis; it expired the
+  moment you found the overlap. Report BLOCKED and let the batch re-approve.
 
 ## Rules
 

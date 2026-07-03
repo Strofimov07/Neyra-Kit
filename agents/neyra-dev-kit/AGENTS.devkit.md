@@ -39,6 +39,7 @@ start with `test-first` — a failing test (RED) before the change.
 | receiving-code-review | receiving-code-review | responding to review findings — verify, no sycophancy |
 | knowledge-graph | knowledge-graph | curating canonical docs/wiki, doc drifts from code, siloed/duplicated knowledge |
 | goal-mode | (manual — opt-in) | autonomous goal orchestration — checkpointed, capped, Linear-anchored |
+| backlog-fleet | (manual — opt-in) | existing backlog → approved parallel batches → lanes, mid-flight independence re-check |
 
 ## Transparency rule (mandatory in autonomous, delegated, and `/loop` runs)
 - Every iteration/turn names the active skill(s)/subagent(s) it used or assumed, and why — per step when running unattended, not only at the end.
@@ -58,4 +59,4 @@ start with `test-first` — a failing test (RED) before the change.
 - Typed-contract convention: {{CONTRACT_STACK}}
 - Linear workspace: {{LINEAR_WORKSPACE}} (every issue MUST have a project — see `linear-router`).
 
-<!-- kit-version: 0.18.0 -->
+<!-- kit-version: 0.19.0 -->
