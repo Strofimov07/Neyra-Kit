@@ -19,6 +19,30 @@ run "skills lint"          python3 "$KIT/lint-skills.py"
 run "skill↔subagent map"   python3 "$KIT/check-skill-mapping.py"
 run "plans lint"           python3 "$KIT/lint-plans.py"
 
+echo "── branch hygiene"
+# Merged branches must not accumulate on origin (pr-hygiene: "Clean up after
+# merge"). Offline check against last-fetched refs — no network; if a branch
+# is already deleted on the remote but the ref lingers, git fetch -p heals it.
+if git rev-parse --git-dir >/dev/null 2>&1 && git remote get-url origin >/dev/null 2>&1; then
+  target=""
+  git show-ref --verify --quiet refs/remotes/origin/dev && target="origin/dev"
+  [ -z "$target" ] && git show-ref --verify --quiet refs/remotes/origin/main && target="origin/main"
+  if [ -n "$target" ]; then
+    stale="$(git branch -r --merged "$target" 2>/dev/null | grep -vE "origin/(dev|main|HEAD)" | sed 's/^ *//')"
+    if [ -n "$stale" ]; then
+      echo "FAIL: merged branches still on origin (vs $target) — git fetch -p, then git push origin --delete <branch>:"
+      printf '%s\n' "$stale" | sed 's/^/   ✗ /'
+      fail=1
+    else
+      echo "ok: no merged branches left on origin (vs $target, refs as of last fetch)"
+    fi
+  else
+    echo "note: no origin/dev or origin/main ref — skip branch hygiene"
+  fi
+else
+  echo "note: not a git repo with origin — skip branch hygiene"
+fi
+
 echo "── hooks"
 if [ -f "$ROOT/.claude/settings.json" ] && grep -q '"SessionStart"' "$ROOT/.claude/settings.json"; then
   echo "ok: SessionStart hook wired (bootstrap force-injects the kit core)"
