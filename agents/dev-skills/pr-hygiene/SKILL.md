@@ -25,7 +25,7 @@ Land changes as small, reviewable, correctly-attributed commits/PRs without swee
 
 ## Steps
 
-1. **Branch first** — never commit straight to the merge target (`dev` if it exists, else `main`); branch off it.
+1. **Branch first** — never commit straight to the merge target (`dev` if it exists, else `main`); branch off it. **In the same breath, flip the anchored tracker issue to In Progress** — a branch named for NEB-XXXX whose issue still says Backlog lies to the team, and skipping the started state destroys cycle-time-by-stage data that delivery-audit and team-health-check compute from `startedAt`. Same-sitting work is not an exception: flip on start, Done only after the gate.
 2. **Scope the stage** — `git add` explicit paths for THIS change. Never `git add -A` when the tree has unrelated or pre-existing changes. Review `git diff --cached --stat` before committing.
 3. **Commit message** — imperative subject + a body that explains what and why. No `Co-Authored-By: Claude`, no "Generated with Claude Code" or any AI attribution — write as the author.
 4. **PR body** — follow the repo's PR Delivery Format (summary, changes, verification, risks); no AI attribution footer.
