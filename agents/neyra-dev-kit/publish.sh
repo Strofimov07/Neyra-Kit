@@ -50,6 +50,10 @@ run rsync -a --delete "$MONOREPO/agents/mgmt-skills/" "$EXT/agents/mgmt-skills/"
 run rsync -a --delete --exclude 'configs/*' --exclude '__pycache__' --exclude '*.pyc' \
   --exclude 'decisionLog.md' --exclude 'signals.log' --exclude 'spikes/' --exclude 'lint-scope.local.txt' --exclude 'mcp-prefixes.local.txt' \
   "$MONOREPO/agents/neyra-dev-kit/" "$EXT/agents/neyra-dev-kit/"
+# VERSION is the drift signal — force-copy it (macOS rsync 2.6.9 has 1-second
+# mtime granularity: a same-size file rewritten within the same second is
+# silently skipped, which shipped a stale stamp once).
+run cp "$KIT_DIR/VERSION" "$EXT/agents/neyra-dev-kit/VERSION"
 run mkdir -p "$EXT/agents/neyra-dev-kit/configs"
 for ex in "$MONOREPO/agents/neyra-dev-kit/configs/"_*.example.sh; do
   [[ -f "$ex" ]] && run cp "$ex" "$EXT/agents/neyra-dev-kit/configs/"
@@ -141,6 +145,9 @@ for lp in "${LEGACY_PATHS[@]}"; do
 done
 
 if [[ $DRY -eq 1 ]]; then echo "(dry-run: nothing committed)"; exit 0; fi
+
+ext_ver="$(cat "$EXT/agents/neyra-dev-kit/VERSION" 2>/dev/null || echo missing)"
+[[ "$ext_ver" == "$VERSION" ]] || { echo "error: external VERSION '$ext_ver' != '$VERSION' after sync — investigate before committing" >&2; exit 1; }
 
 if [[ -z "$(git -C "$EXT" status --porcelain)" ]]; then
   echo "external already up to date with v$VERSION — nothing to commit"
