@@ -1,0 +1,29 @@
+# knowledge-map.yml — code→node bridge (skill `knowledge-graph`).
+# Maps code-path globs to canon node slugs. When an agent changes a mapped file it
+# must update the bound node(s) in the same change (code→node trigger / DoD).
+# `check_code_node.py` reads this. STARTER — fill per repo.
+
+version: 0.1.0
+owner: Knowledge & Memory Bank Agent
+
+# One owner-layer per fact (see skill `knowledge-graph` layer contract):
+layers:
+  code:        { role: runtime-truth, owns: [behavior] }
+  canon:       { role: wiki,          owns: [REQ, UXC, ADR, RSK, COMP, EVT, MET, RUN] }
+  tracker:     { role: execution,     owns: [status, scope, ownership] }
+  repo_docs:   { role: runtime-proximal }
+  legacy:      { role: archive,       owns: [] }
+
+# Canon nodes (slug → owner page/db). notion_id filled when the node is created.
+nodes: []
+  # - slug: COMP-example
+  #   type: COMP
+  #   title: "Example component"
+  #   canon: "<notion-page-or-db-id>"
+  #   notion_id: null
+
+# Bridge: glob → nodes to update when the file changes.
+code_to_node: []
+  # - paths: ["src/path/to/module.py"]
+  #   nodes: [COMP-example]
+  #   also_check: []

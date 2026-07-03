@@ -1,0 +1,54 @@
+# neyra-dev-kit — what the installer ships into a target repo.
+# Canonical source lives in THIS monorepo; the installer copies Layer A as-is
+# and renders Layer B from per-repo config. Single source of truth, no vendored
+# duplicates → no drift.
+
+version: 0.1.0
+
+# Layer A — portable, copied verbatim. Work in any repo unchanged.
+portable:
+  skills_from: agents/dev-skills            # all SKILL.md dirs copied to <target>/agents/dev-skills/
+  subagents_from: .claude/agents            # copied to <target>/.claude/agents/
+  subagents:
+    - implementation-loop
+    - test-first               # source: dev-skills/test-first
+    - systematic-debugging     # source: dev-skills/systematic-debugging
+    - spec-elicitation         # source: dev-skills/spec-elicitation
+    - writing-plans            # source: dev-skills/writing-plans
+    - spec-review              # source: dev-skills/spec-review
+    - subagent-dispatch        # source: dev-skills/subagent-dispatch
+    - receiving-code-review    # source: dev-skills/receiving-code-review
+    - code-reviewer            # source: dev-skills/simplify-diff
+    - verify-runtime
+    - regression-scout
+    - release-readiness
+    - trust-boundary-review
+    - analytics-instrumentation
+    - kit-evolution            # source: dev-skills/kit-evolution
+
+# Layer B — templated, rendered from config (encode per-repo conventions).
+templated:
+  templates_from: agents/neyra-dev-kit/templates/agents
+  subagents:
+    - id: linear-router         # needs: linear.workspace, linear.routing
+      enable_key: enable_linear_router
+    - id: localization-checker  # needs: locales, i18n_mechanism
+      enable_key: enable_localization_checker
+    - id: contract-checker      # needs: contract_stack
+      enable_key: enable_contract_checker
+
+# Governance fragment included into the target repo's AGENTS.md / CLAUDE.md.
+governance:
+  template: agents/neyra-dev-kit/AGENTS.devkit.md
+  renders_to: AGENTS.neyra-devkit.md
+
+# MCP layer — project-scoped servers wired into the target repo's .mcp.json.
+# Global MCPs (Linear, Notion, Figma) are user-level and already available — not shipped here.
+mcp:
+  template: agents/neyra-dev-kit/mcp/neyra.mcp.json.tmpl
+  merges_into: .mcp.json            # jq deep-merge; existing servers preserved
+  enable_key: enable_neyra_mcp
+  servers:
+    - id: neyra                     # local node bridge: memory/config/aso/finance/browser tools
+      entry: plugins/neyra-cursor-plugin/mcp-server/index.mjs   # canonical, from this monorepo
+      secrets: env-placeholders     # ${NEYRA_API_URL} etc. — never committed

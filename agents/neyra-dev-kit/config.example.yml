@@ -1,0 +1,23 @@
+# Per-repo overlay for neyra-dev-kit. Copy to configs/<repo>.sh and fill in.
+# NOTE: the installer sources a SHELL file (configs/<repo>.sh), not this YAML —
+# this YAML only documents the fields. See configs/*.sh for the real format.
+#
+# Fields:
+#   REPO_NAME             short slug, e.g. "pravo"
+#   STACK                 freeform, e.g. "Django + React"
+#   BUILD_VERIFY_CMD      how verify-runtime builds/tests this repo (the real command)
+#   LOCALES               required locales for localization-checker, e.g. "en + ru"
+#   I18N_MECHANISM        how strings are localized, e.g. "django gettext (.po)"
+#   CONTRACT_STACK        typed-contract convention, e.g. "DRF + drf-spectacular + generated client"
+#   LINEAR_WORKSPACE      e.g. "your-workspace"
+#   LINEAR_ROUTING        multi-line routing table (tag/domain -> Linear project)
+#   ENABLE_LINEAR_ROUTER         0/1
+#   ENABLE_LOCALIZATION_CHECKER  0/1
+#   ENABLE_CONTRACT_CHECKER      0/1
+#   ENABLE_NEYRA_MCP             0/1  (project-scoped Neyra MCP into .mcp.json; off in the standard rollout)
+#   ENABLE_CURSOR_SKILLS         0/1  (symlink dev-skills into .cursor/skills/ for Cursor)
+#   LINEAR_MCP_PREFIX            your Linear MCP server-instance id, e.g. mcp__<hash> (find it in Claude Code via /mcp).
+#                                Per-user — a friend MUST set their own. Empty → linear-router is skipped (not installed broken).
+#
+# SAFETY: configs/<repo>.sh is executed as shell (sourced) by the installer —
+# only run the installer with a config you have reviewed.

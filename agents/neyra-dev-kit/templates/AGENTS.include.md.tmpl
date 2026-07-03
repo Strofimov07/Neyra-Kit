@@ -1,0 +1,10 @@
+
+---
+
+## Engineering process (neyra-dev-kit)
+
+This repo uses the shared Neyra engineering skill stack. Auto-subagents live in `.claude/agents/` (Claude Code delegates by `description` automatically). Full spec + skill↔subagent map: [AGENTS.neyra-devkit.md](AGENTS.neyra-devkit.md).
+
+**Transparency — required in `/loop` and autonomous runs:** each turn, name the skill(s)/subagent(s) you used or assumed and why. Report subagent results faithfully (distinguish what was verified from what is still assumed). Skip a matrix-required check only with an explicit one-line reason in the same turn.
+
+**Post-implementation gate — before declaring a code slice done:** `code-reviewer` (reuse/scope) → matrix add-ons for the touched surface (`localization-checker` for copy, `contract-checker` for endpoints) → `verify-runtime` on the real surface (`{{BUILD_VERIFY_CMD}}`) → `release-readiness` + `regression-scout` for high-risk or cross-layer changes.

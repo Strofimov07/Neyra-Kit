@@ -1,0 +1,377 @@
+#!/usr/bin/env bash
+# neyra-dev-kit installer — roll a named skill kit into a repo.
+#
+# Usage:
+#   install.sh [--dry-run|--doctor] [--allow-non-git] <kit> <target-repo-path> <config.sh>
+#   install.sh [--dry-run|--doctor] [--allow-non-git] <target-repo-path> <config.sh>
+#     (2-positional back-compat form: kit defaults to "dev")
+#
+# Sources manifests/<kit>.sh for the kit definition, then copies Layer A
+# (portable skills + generic subagents) verbatim from the canonical monorepo,
+# renders Layer B (templated subagents + AGENTS fragment) from <config.sh>,
+# and writes a version stamp. Idempotent: overwrites only kit-managed files.
+set -euo pipefail
+
+KIT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MONOREPO="$(cd "$KIT_DIR/../.." && pwd)"
+CANON_AGENTS="$MONOREPO/.claude/agents"
+VERSION="$(cat "$KIT_DIR/VERSION")"
+
+DRY=0; ALLOW_NON_GIT=0; DOCTOR=0
+while [[ "${1:-}" == --* ]]; do
+  case "$1" in
+    --dry-run) DRY=1;;
+    --allow-non-git) ALLOW_NON_GIT=1;;
+    --doctor) DOCTOR=1;;
+    *) echo "unknown flag: $1" >&2; exit 1;;
+  esac; shift
+done
+
+# Back-compat: 2-positional form (no kit) → default kit = dev.
+if [[ $# -eq 2 ]]; then
+  KIT="dev"
+  TARGET="${1:?usage: install.sh [flags] [<kit>] <target-repo> <config.sh>}"
+  CONFIG="${2:?usage: install.sh [flags] [<kit>] <target-repo> <config.sh>}"
+else
+  KIT="${1:?usage: install.sh [flags] [<kit>] <target-repo> <config.sh>}"
+  TARGET="${2:?usage: install.sh [flags] [<kit>] <target-repo> <config.sh>}"
+  CONFIG="${3:?usage: install.sh [flags] [<kit>] <target-repo> <config.sh>}"
+fi
+
+# Load manifest.
+MANIFEST="$KIT_DIR/manifests/$KIT.sh"
+[[ -f "$MANIFEST" ]] || { echo "error: unknown kit '$KIT' — no manifest at $MANIFEST" >&2; exit 1; }
+# shellcheck disable=SC1090
+source "$MANIFEST"
+
+TARGET="$(cd "$TARGET" && pwd)"
+if [[ $ALLOW_NON_GIT -eq 0 && $DOCTOR -eq 0 ]]; then
+  git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1 || { echo "error: $TARGET is not a git repo — pass --allow-non-git to override" >&2; exit 1; }
+fi
+[[ -f "$CONFIG" ]] || { echo "config not found: $CONFIG" >&2; exit 1; }
+
+# Defaults; overridden by config.
+ENABLE_LINEAR_ROUTER=1; ENABLE_LOCALIZATION_CHECKER=1; ENABLE_CONTRACT_CHECKER=1
+ENABLE_NEYRA_MCP=1; ENABLE_CURSOR_SKILLS=1; ENABLE_HOOKS=1
+REPO_NAME=""; STACK=""; BUILD_VERIFY_CMD=""; LOCALES=""; I18N_MECHANISM=""
+CONTRACT_STACK=""; LINEAR_WORKSPACE=""; LINEAR_ROUTING=""
+# Linear MCP server-instance prefix the linear-router's tools resolve against. This is
+# per-user/per-connection — a friend MUST set their own (find it via Claude Code /mcp).
+# Empty → linear-router is skipped (never installed broken).
+LINEAR_MCP_PREFIX=""
+# Notion MCP instance id for portable agents that use Notion tools (same per-user
+# semantics as LINEAR_MCP_PREFIX). Empty -> {{NOTION_MCP_PREFIX}} placeholders stay
+# inert (those tools inactive), everything else works.
+NOTION_MCP_PREFIX=""
+FIGMA_MCP_PREFIX=""
+# Canonical Neyra MCP server entrypoint (project-scoped; global MCPs like Linear/Notion are user-level).
+NEYRA_MCP_ENTRY="$MONOREPO/plugins/neyra-cursor-plugin/mcp-server/index.mjs"
+# NOTE: the config is executed as shell (sourced) — only run with configs you have reviewed.
+# shellcheck disable=SC1090
+source "$CONFIG"
+
+say()  { printf '  %s\n' "$*"; }
+do_()  { if [[ $DRY -eq 1 ]]; then say "[dry] $*"; else eval "$*"; fi; }
+
+render() { # render <template-file> -> stdout. Values passed via env (no code injection),
+           # perl substitution so '&' and other regex-special chars in values are literal.
+  REPO_NAME="$REPO_NAME" STACK="$STACK" BUILD_VERIFY_CMD="$BUILD_VERIFY_CMD" \
+  LOCALES="$LOCALES" I18N_MECHANISM="$I18N_MECHANISM" CONTRACT_STACK="$CONTRACT_STACK" \
+  LINEAR_WORKSPACE="$LINEAR_WORKSPACE" LINEAR_ROUTING="$LINEAR_ROUTING" NEYRA_MCP_ENTRY="$NEYRA_MCP_ENTRY" \
+  LINEAR_MCP_PREFIX="$LINEAR_MCP_PREFIX" \
+  perl -0777 -pe '
+    for my $k (qw(REPO_NAME STACK BUILD_VERIFY_CMD LOCALES I18N_MECHANISM CONTRACT_STACK LINEAR_WORKSPACE LINEAR_ROUTING NEYRA_MCP_ENTRY LINEAR_MCP_PREFIX)) {
+      my $v = $ENV{$k} // ""; s/\{\{\Q$k\E\}\}/$v/g;
+    }
+  ' "$1"
+}
+write() { # write <dest> <<<content (stdin)
+  if [[ $DRY -eq 1 ]]; then say "[dry] write $1"; cat > /dev/null; else mkdir -p "$(dirname "$1")"; cat > "$1"; fi
+}
+
+# Convert templated-agent id to its enable-flag name (e.g. linear-router → ENABLE_LINEAR_ROUTER).
+# Uses tr (not bash-4 ${^^}) so it runs on stock macOS bash 3.2 too.
+enable_flag() { echo "ENABLE_$(printf '%s' "$1" | tr 'a-z-' 'A-Z_')"; }
+
+if [[ $DOCTOR -eq 1 ]]; then
+  echo "neyra-dev-kit doctor v$VERSION — kit=$KIT_NAME — ${REPO_NAME:-?}"
+  echo "  Zero-setup subagents (Read/Grep/Glob/Bash only — work for anyone, no accounts):"
+  echo "    ${PORTABLE_AGENTS[*]} ${TEMPLATED_AGENTS[*]}"
+  echo "  Needs external setup:"
+  if [[ "$ENABLE_LINEAR_ROUTER" == "1" && -n "$LINEAR_MCP_PREFIX" ]]; then echo "    linear-router → Linear MCP (prefix set: $LINEAR_MCP_PREFIX)"
+  elif [[ "$ENABLE_LINEAR_ROUTER" == "1" ]]; then echo "    linear-router → NEEDS your Linear MCP id in LINEAR_MCP_PREFIX (Claude Code: /mcp) — else skipped"
+  else echo "    linear-router → disabled in config"; fi
+  for srv in "${MCP_SERVERS[@]}"; do
+    if [[ "$srv" == "neyra" ]]; then
+      if [[ "$ENABLE_NEYRA_MCP" == "1" ]]; then echo "    neyra MCP (.mcp.json) → needs NEYRA_API_URL / NEYRA_API_KEY in your env"
+      else echo "    neyra MCP → disabled in config"; fi
+    fi
+  done
+  echo "  Notion: not required by the kit."
+  exit 0
+fi
+
+echo "neyra-dev-kit v$VERSION [kit=$KIT_NAME] → $TARGET  (repo: ${REPO_NAME:-?})"
+[[ $DRY -eq 1 ]] && echo "(dry-run: no files written)"
+
+# Resolve the canonical skills source for this kit.
+CANON_SKILLS="$MONOREPO/$SKILLS_SRC"
+[[ -d "$CANON_SKILLS" ]] || { echo "error: SKILLS_SRC '$SKILLS_SRC' not found in monorepo at $CANON_SKILLS" >&2; exit 1; }
+
+echo "Layer A — portable skills ($SKILLS_SRC):"
+do_ "mkdir -p '$TARGET/$SKILLS_SRC'"
+if [[ "${SKILLS[0]}" == "ALL" ]]; then
+  # Copy the whole dir.
+  if command -v rsync >/dev/null 2>&1; then
+    do_ "rsync -a --delete '$CANON_SKILLS/' '$TARGET/$SKILLS_SRC/'"
+  else
+    do_ "cp -R '$CANON_SKILLS/'* '$TARGET/$SKILLS_SRC/'"
+  fi
+  SKILL_COUNT="$(find "$CANON_SKILLS" -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')"
+  say "synced $SKILL_COUNT skill dirs"
+else
+  # Copy only listed skill-id dirs.
+  n=0
+  for skill_id in "${SKILLS[@]}"; do
+    src="$CANON_SKILLS/$skill_id"
+    if [[ -d "$src" ]]; then
+      if command -v rsync >/dev/null 2>&1; then
+        do_ "rsync -a --delete '$src/' '$TARGET/$SKILLS_SRC/$skill_id/'"
+      else
+        do_ "cp -R '$src' '$TARGET/$SKILLS_SRC/'"
+      fi
+      n=$((n+1))
+    else
+      say "WARN: skill '$skill_id' not found in $CANON_SKILLS — skipped"
+    fi
+  done
+  say "synced $n skill dirs"
+fi
+
+echo "Layer A — portable subagents:"
+do_ "mkdir -p '$TARGET/.claude/agents'"
+for a in "${PORTABLE_AGENTS[@]}"; do
+  if [[ -f "$CANON_AGENTS/$a.md" ]]; then
+    do_ "cp '$CANON_AGENTS/$a.md' '$TARGET/.claude/agents/$a.md'"
+    # Published copies carry {{LINEAR_MCP_PREFIX}}/{{NOTION_MCP_PREFIX}}
+    # placeholders (MCP ids are per-user) — substitute the consumer's own ids.
+    # No-op on monorepo canon (real ids, no placeholders) and in dry-run.
+    if [[ $DRY -eq 0 ]]; then
+      [[ -n "$LINEAR_MCP_PREFIX" ]] && perl -pi -e "s/\Q{{LINEAR_MCP_PREFIX}}\E/$LINEAR_MCP_PREFIX/g" "$TARGET/.claude/agents/$a.md"
+      [[ -n "${NOTION_MCP_PREFIX:-}" ]] && perl -pi -e "s/\Q{{NOTION_MCP_PREFIX}}\E/$NOTION_MCP_PREFIX/g" "$TARGET/.claude/agents/$a.md"
+      [[ -n "${FIGMA_MCP_PREFIX:-}" ]] && perl -pi -e "s/\Q{{FIGMA_MCP_PREFIX}}\E/$FIGMA_MCP_PREFIX/g" "$TARGET/.claude/agents/$a.md"
+    fi
+    say "$a"
+  else say "WARN: $a.md not found in canon ($CANON_AGENTS) — skipped"; fi
+done
+
+if [[ "${CURSOR_SKILLS}" == "1" ]]; then
+  echo "Cursor — symlink skills into .cursor/skills/:"
+  do_ "mkdir -p '$TARGET/.cursor/skills'"
+  n=0
+  if [[ "${SKILLS[0]}" == "ALL" ]]; then
+    for s in "$CANON_SKILLS"/*/; do
+      id="$(basename "$s")"; [[ -f "$CANON_SKILLS/$id/SKILL.md" ]] || continue
+      if [[ $DRY -eq 1 ]]; then say "[dry] link .cursor/skills/$id"; else ln -sfn "../../$SKILLS_SRC/$id" "$TARGET/.cursor/skills/$id"; fi
+      n=$((n+1))
+    done
+  else
+    for skill_id in "${SKILLS[@]}"; do
+      [[ -f "$CANON_SKILLS/$skill_id/SKILL.md" ]] || continue
+      if [[ $DRY -eq 1 ]]; then say "[dry] link .cursor/skills/$skill_id"; else ln -sfn "../../$SKILLS_SRC/$skill_id" "$TARGET/.cursor/skills/$skill_id"; fi
+      n=$((n+1))
+    done
+  fi
+  say "linked $n skills (.cursor/skills/<id> → ../../$SKILLS_SRC/<id>)"
+fi
+
+if [[ "${ENABLE_CODEX:-1}" == "1" ]]; then
+  echo "Codex — symlink skills into .agents/skills/:"
+  do_ "mkdir -p '$TARGET/.agents/skills'"
+  n=0
+  if [[ "${SKILLS[0]}" == "ALL" ]]; then
+    for s in "$CANON_SKILLS"/*/; do
+      id="$(basename "$s")"; [[ -f "$CANON_SKILLS/$id/SKILL.md" ]] || continue
+      if [[ $DRY -eq 1 ]]; then say "[dry] link .agents/skills/$id"; else ln -sfn "../../$SKILLS_SRC/$id" "$TARGET/.agents/skills/$id"; fi
+      n=$((n+1))
+    done
+  else
+    for skill_id in "${SKILLS[@]}"; do
+      [[ -f "$CANON_SKILLS/$skill_id/SKILL.md" ]] || continue
+      if [[ $DRY -eq 1 ]]; then say "[dry] link .agents/skills/$skill_id"; else ln -sfn "../../$SKILLS_SRC/$skill_id" "$TARGET/.agents/skills/$skill_id"; fi
+      n=$((n+1))
+    done
+  fi
+  say "linked $n skills (.agents/skills/<id> → ../../$SKILLS_SRC/<id>) [Codex]"
+fi
+
+echo "Layer B — templated subagents:"
+for tmpl_id in "${TEMPLATED_AGENTS[@]}"; do
+  flag="$(enable_flag "$tmpl_id")"
+  flag_val="${!flag:-1}"  # default enabled if not set in config
+  tmpl_file="$KIT_DIR/templates/agents/$tmpl_id.md.tmpl"
+  if [[ "$tmpl_id" == "linear-router" ]]; then
+    if [[ "$ENABLE_LINEAR_ROUTER" == "1" && -n "$LINEAR_MCP_PREFIX" ]]; then
+      render "$tmpl_file" | write "$TARGET/.claude/agents/linear-router.md"; say "linear-router (Linear MCP: $LINEAR_MCP_PREFIX)"
+    elif [[ "$ENABLE_LINEAR_ROUTER" == "1" ]]; then
+      say "linear-router SKIPPED — set LINEAR_MCP_PREFIX to your Linear MCP id (Claude Code: /mcp), then re-run"
+    fi
+  else
+    if [[ "$flag_val" == "1" ]]; then
+      if [[ -f "$tmpl_file" ]]; then
+        render "$tmpl_file" | write "$TARGET/.claude/agents/$tmpl_id.md"; say "$tmpl_id"
+      else
+        say "WARN: template not found for $tmpl_id at $tmpl_file — skipped"
+      fi
+    fi
+  fi
+done
+
+echo "Governance fragment:"
+GOVERNANCE_SRC="$KIT_DIR/$GOVERNANCE_TMPL"
+[[ -f "$GOVERNANCE_SRC" ]] || { echo "error: governance template '$GOVERNANCE_TMPL' not found at $GOVERNANCE_SRC" >&2; exit 1; }
+render "$GOVERNANCE_SRC" | write "$TARGET/AGENTS.neyra-devkit.md"
+say "AGENTS.neyra-devkit.md"
+# Auto-wire the transparency + gate block into the repo's AGENTS.md (or CLAUDE.md). Idempotent.
+wired=""
+for inc in AGENTS.md CLAUDE.md; do
+  incf="$TARGET/$inc"; [[ -f "$incf" ]] || continue
+  wired=1
+  if grep -q "Engineering process (neyra-dev-kit)" "$incf" 2>/dev/null; then say "$inc already has the kit block — left as is"
+  elif [[ $DRY -eq 1 ]]; then say "[dry] append inline kit block to $inc"
+  else
+    blk="$(mktemp)"; render "$KIT_DIR/templates/AGENTS.include.md.tmpl" > "$blk"; cat "$blk" >> "$incf"; rm -f "$blk"  # atomic: render fully, then append
+    say "appended inline kit block (transparency + gate) to $inc"
+  fi
+  break
+done
+[[ -z "$wired" && $DRY -eq 0 ]] && say "WARN: no AGENTS.md/CLAUDE.md in $TARGET — reference AGENTS.neyra-devkit.md manually"
+
+for srv in "${MCP_SERVERS[@]}"; do
+  if [[ "$srv" == "neyra" && "$ENABLE_NEYRA_MCP" == "1" ]]; then
+    echo "MCP — project-scoped Neyra server (.mcp.json):"
+    if [[ ! -f "$NEYRA_MCP_ENTRY" ]]; then
+      say "WARN: canonical MCP server not found at $NEYRA_MCP_ENTRY — skipping"
+    else
+      rendered_mcp="$(render "$KIT_DIR/mcp/neyra.mcp.json.tmpl")"
+      dest="$TARGET/.mcp.json"
+      if [[ $DRY -eq 1 ]]; then
+        say "[dry] merge 'neyra' server into $dest"
+      elif [[ -f "$dest" ]] && command -v jq >/dev/null 2>&1; then
+        cp "$dest" "$dest.bak"
+        tmp="$(mktemp)"; tmpnew="$(mktemp)"; printf '%s' "$rendered_mcp" > "$tmpnew"
+        if jq -s '.[0] * .[1]' "$dest" "$tmpnew" > "$tmp"; then mv "$tmp" "$dest"; else rm -f "$tmp" "$tmpnew"; echo "error: jq merge failed; .mcp.json unchanged (backup .mcp.json.bak)" >&2; exit 1; fi
+        rm -f "$tmpnew"
+        say "merged 'neyra' into .mcp.json (backup .mcp.json.bak; other servers preserved)"
+      else
+        printf '%s\n' "$rendered_mcp" > "$dest"; say "wrote $dest"
+      fi
+      # .mcp.json embeds a machine-local absolute path → keep it out of git.
+      grep -qxF '.mcp.json' "$TARGET/.gitignore" 2>/dev/null || printf '.mcp.json\n' >> "$TARGET/.gitignore"
+      say ".mcp.json gitignored (contains a machine-local path; secrets stay as \${ENV} placeholders)"
+    fi
+  fi
+done
+
+# Hooks + bootstrap — deterministic enforcement surfaces (NEB-1321/1316).
+# Copies the self-contained tooling the hooks depend on, then wires the hooks into
+# the target's .claude/settings.json (append, never clobber; idempotent).
+if [[ "${ENABLE_HOOKS}" == "1" ]]; then
+  echo "Hooks — bootstrap + enforcement (.claude/settings.json):"
+  tool_dst="$TARGET/agents/neyra-dev-kit"
+  if [[ $DRY -eq 1 ]]; then
+    say "[dry] copy hooks/, KIT_BOOTSTRAP.md, doctor.sh, lint-*.py, check-skill-mapping.py, VERSION → $tool_dst"
+  else
+    mkdir -p "$tool_dst/hooks/lib"
+    if cp "$KIT_DIR"/hooks/*.sh "$tool_dst/hooks/" 2>/dev/null; then chmod +x "$tool_dst"/hooks/*.sh; fi
+    cp "$KIT_DIR"/hooks/lib/*.sh "$tool_dst/hooks/lib/" 2>/dev/null || true   # the host I/O shim the hooks source
+    for f in KIT_BOOTSTRAP.md doctor.sh lint-skills.py check-skill-mapping.py lint-plans.py VERSION; do
+      [[ -f "$KIT_DIR/$f" ]] && cp "$KIT_DIR/$f" "$tool_dst/$f"
+    done
+    if [[ -d "$KIT_DIR/orchestration" ]]; then mkdir -p "$tool_dst/orchestration"; cp "$KIT_DIR"/orchestration/* "$tool_dst/orchestration/" 2>/dev/null || true; fi   # goal-mode driver + README
+    chmod +x "$tool_dst/doctor.sh" 2>/dev/null || true
+    say "copied hook scripts + doctor + linters into agents/neyra-dev-kit/"
+  fi
+  hooks_json='{"SessionStart":[{"hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/session-start.sh\""}]}],"PreToolUse":[{"matcher":"Edit|Write|MultiEdit","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/pre-tool-use-guard.sh\""}]},{"matcher":"Task","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/count-task.sh\""}]}],"PostToolUse":[{"matcher":"Edit|Write|MultiEdit","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/post-tool-use-format.sh\""}]}],"Stop":[{"hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/stop-gate.sh\""}]}]}'
+  sdst="$TARGET/.claude/settings.json"
+  if [[ $DRY -eq 1 ]]; then
+    say "[dry] wire 4 hooks (SessionStart/PreToolUse/PostToolUse/Stop) into $sdst"
+  elif grep -q 'neyra-dev-kit/hooks' "$sdst" 2>/dev/null; then
+    say "settings.json already wires neyra-dev-kit hooks — left as is"
+  elif [[ -f "$sdst" ]] && command -v jq >/dev/null 2>&1; then
+    cp "$sdst" "$sdst.bak"
+    tmp="$(mktemp)"
+    if jq --argjson add "$hooks_json" '.hooks = (.hooks // {}) | reduce ($add|to_entries[]) as $e (.; .hooks[$e.key] = ((.hooks[$e.key] // []) + $e.value))' "$sdst" > "$tmp"; then
+      mv "$tmp" "$sdst"; say "merged hooks into settings.json (backup .bak; existing hooks preserved)"
+    else rm -f "$tmp"; say "WARN: jq merge failed; settings.json unchanged (backup .bak)"; fi
+  else
+    mkdir -p "$TARGET/.claude"
+    if command -v jq >/dev/null 2>&1; then printf '{"hooks":%s}' "$hooks_json" | jq . > "$sdst"; else printf '{"hooks":%s}\n' "$hooks_json" > "$sdst"; fi
+    say "wrote .claude/settings.json with hooks"
+  fi
+
+  # Cursor surface — hooks.json + always-apply bootstrap rule (Cursor uses a rule
+  # for always-on context instead of a SessionStart hook).
+  if [[ "${ENABLE_CURSOR_HOOKS:-1}" == "1" ]]; then
+    if [[ $DRY -eq 1 ]]; then
+      say "[dry] write .cursor/hooks.json + .cursor/rules/neyra-kit-bootstrap.mdc"
+    else
+      mkdir -p "$TARGET/.cursor/rules"
+      cp "$KIT_DIR/templates/cursor/hooks.json" "$TARGET/.cursor/hooks.json"
+      { printf -- '---\ndescription: Neyra dev-kit core — mandatory gates and skill rules\nalwaysApply: true\n---\n\n'; cat "$tool_dst/KIT_BOOTSTRAP.md"; } > "$TARGET/.cursor/rules/neyra-kit-bootstrap.mdc"
+      say "wrote .cursor/hooks.json + bootstrap rule"
+    fi
+  fi
+
+  # Codex surface — hooks.json (SessionStart/PreToolUse/PostToolUse/Stop). The I/O
+  # contract is confirmed against the docs; the registration-file schema is
+  # best-effort — confirm against a live Codex CLI (/hooks) before relying on it.
+  if [[ "${ENABLE_CODEX:-1}" == "1" ]]; then
+    if [[ $DRY -eq 1 ]]; then
+      say "[dry] write .codex/hooks.json"
+    else
+      mkdir -p "$TARGET/.codex"
+      cp "$KIT_DIR/templates/codex/hooks.json" "$TARGET/.codex/hooks.json"
+      say "wrote .codex/hooks.json (confirm schema via Codex /hooks)"
+    fi
+  fi
+fi
+
+# Knowledge graph scaffold (skill `knowledge-graph`). Copies freshness tooling
+# (always) + templates (only if absent) into docs/knowledge/, plus the CI workflow.
+# Best-effort, never fails the install.
+if [[ -d "$KIT_DIR/knowledge" ]]; then
+  kdst="$TARGET/docs/knowledge"
+  if [[ $DRY -eq 1 ]]; then
+    say "[dry] scaffold docs/knowledge/ (memory_freshness.py, check_code_node.py, templates, CI)"
+  else
+    mkdir -p "$kdst" 2>/dev/null || true
+    cp "$KIT_DIR/knowledge/memory_freshness.py" "$kdst/memory_freshness.py" 2>/dev/null || true
+    cp "$KIT_DIR/knowledge/check_code_node.py" "$kdst/check_code_node.py" 2>/dev/null || true
+    [[ -f "$kdst/knowledge-map.yml" ]] || cp "$KIT_DIR/knowledge/templates/knowledge-map.yml" "$kdst/knowledge-map.yml" 2>/dev/null || true
+    [[ -f "$kdst/README.md" ]] || cp "$KIT_DIR/knowledge/templates/README.md" "$kdst/README.md" 2>/dev/null || true
+    if [[ -f "$KIT_DIR/knowledge/templates/doc-freshness.yml" ]]; then
+      mkdir -p "$TARGET/.github/workflows" 2>/dev/null || true
+      [[ -f "$TARGET/.github/workflows/doc-freshness.yml" ]] || cp "$KIT_DIR/knowledge/templates/doc-freshness.yml" "$TARGET/.github/workflows/doc-freshness.yml" 2>/dev/null || true
+    fi
+    say "scaffolded docs/knowledge/ (freshness tooling + templates + CI; existing files kept)"
+  fi
+fi
+
+# Doc-freshness routine spec (NEB-1366). install.sh cannot register a schedule
+# (cron lives in the scheduler, not the file) — it STAGES the spec; the agent
+# registers it weekly on first session (see KIT_BOOTSTRAP). Best-effort, never fails.
+if [[ -f "$KIT_DIR/routines/doc-freshness.SKILL.md" ]]; then
+  rdst="$TARGET/docs/knowledge/routines"
+  if [[ $DRY -eq 1 ]]; then
+    say "[dry] stage doc-freshness routine spec → $rdst/doc-freshness.SKILL.md"
+  else
+    mkdir -p "$rdst" 2>/dev/null \
+      && sed "s#{{REPO_PATH}}#$TARGET#g" "$KIT_DIR/routines/doc-freshness.SKILL.md" > "$rdst/doc-freshness.SKILL.md" 2>/dev/null \
+      && say "staged doc-freshness routine spec (register weekly via scheduler — cron is app-side)" || true
+  fi
+fi
+
+do_ "printf '%s\n' '$VERSION' > '$TARGET/.neyra-dev-kit.version'"
+echo "Done. Next: add a line to $TARGET/AGENTS.md (or CLAUDE.md):"
+echo "      See [AGENTS.neyra-devkit.md](AGENTS.neyra-devkit.md) for the shared skill stack."

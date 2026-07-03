@@ -1,0 +1,14 @@
+{
+  "SessionStart": [
+    { "command": "NEYRA_HOOK_HOST=codex agents/neyra-dev-kit/hooks/session-start.sh" }
+  ],
+  "PreToolUse": [
+    { "command": "NEYRA_HOOK_HOST=codex agents/neyra-dev-kit/hooks/pre-tool-use-guard.sh" }
+  ],
+  "PostToolUse": [
+    { "command": "NEYRA_HOOK_HOST=codex agents/neyra-dev-kit/hooks/post-tool-use-format.sh" }
+  ],
+  "Stop": [
+    { "command": "NEYRA_HOOK_HOST=codex agents/neyra-dev-kit/hooks/stop-gate.sh" }
+  ]
+}

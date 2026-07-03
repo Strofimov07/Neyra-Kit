@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      { "command": "NEYRA_HOOK_HOST=cursor agents/neyra-dev-kit/hooks/pre-tool-use-guard.sh" }
+    ],
+    "afterFileEdit": [
+      { "command": "NEYRA_HOOK_HOST=cursor agents/neyra-dev-kit/hooks/post-tool-use-format.sh" }
+    ],
+    "stop": [
+      { "command": "NEYRA_HOOK_HOST=cursor agents/neyra-dev-kit/hooks/stop-gate.sh" }
+    ]
+  }
+}

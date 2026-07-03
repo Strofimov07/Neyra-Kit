@@ -1,0 +1,27 @@
+# Doc freshness — code→node trigger (см. docs/knowledge/MEMORY_GRAPH.md §6, Triggers).
+# Информационный (non-blocking): на PR, тронувшем mapped-код, печатает узлы канона,
+# которые надо обновить. Промоут до блокирующего — добавить `--strict` ниже.
+name: Doc freshness (code→node)
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'docs/knowledge/knowledge-map.yml'
+
+jobs:
+  code-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: code→node check (informational)
+        run: |
+          echo "## Doc freshness — code→node" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          python3 docs/knowledge/check_code_node.py "origin/${{ github.base_ref }}" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
