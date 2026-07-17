@@ -49,8 +49,10 @@ def validate(path: pathlib.Path) -> list[str]:
                 command = handler.get("command", "")
                 if "NEYRA_HOOK_HOST=codex" not in command:
                     errors.append(f"{event} {script} must set NEYRA_HOOK_HOST=codex")
-                if "$(git rev-parse --show-toplevel)" not in command:
+                if "git rev-parse --show-toplevel" not in command:
                     errors.append(f"{event} {script} must resolve from the Git root")
+                if "|| pwd" not in command:
+                    errors.append(f"{event} {script} must support non-Git workspaces")
                 if expected_matcher and group.get("matcher") != expected_matcher:
                     errors.append(
                         f"{event} {script} matcher must be {expected_matcher!r}"

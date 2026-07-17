@@ -45,7 +45,8 @@ class CodexHookConfigTests(unittest.TestCase):
                 for handler in group["hooks"]:
                     command = handler["command"]
                     self.assertIn("NEYRA_HOOK_HOST=codex", command)
-                    self.assertIn("$(git rev-parse --show-toplevel)", command)
+                    self.assertIn("git rev-parse --show-toplevel", command)
+                    self.assertIn("|| pwd", command)
 
     def test_installer_explains_codex_hook_trust_step(self):
         installer = (KIT / "install.sh").read_text(encoding="utf-8")

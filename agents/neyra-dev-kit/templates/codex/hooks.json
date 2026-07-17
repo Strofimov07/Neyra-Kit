@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "NEYRA_HOOK_HOST=codex \"$(git rev-parse --show-toplevel)/agents/neyra-dev-kit/hooks/session-start.sh\"",
+            "command": "NEYRA_HOOK_HOST=codex \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/agents/neyra-dev-kit/hooks/session-start.sh\"",
             "statusMessage": "Loading Neyra kit rules"
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "NEYRA_HOOK_HOST=codex \"$(git rev-parse --show-toplevel)/agents/neyra-dev-kit/hooks/pre-tool-use-guard.sh\"",
+            "command": "NEYRA_HOOK_HOST=codex \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/agents/neyra-dev-kit/hooks/pre-tool-use-guard.sh\"",
             "statusMessage": "Checking Neyra kit guard"
           }
         ]
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "NEYRA_HOOK_HOST=codex \"$(git rev-parse --show-toplevel)/agents/neyra-dev-kit/hooks/post-tool-use-format.sh\"",
+            "command": "NEYRA_HOOK_HOST=codex \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/agents/neyra-dev-kit/hooks/post-tool-use-format.sh\"",
             "statusMessage": "Formatting edited file"
           }
         ]
@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "NEYRA_HOOK_HOST=codex \"$(git rev-parse --show-toplevel)/agents/neyra-dev-kit/hooks/stop-gate.sh\"",
+            "command": "NEYRA_HOOK_HOST=codex \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/agents/neyra-dev-kit/hooks/stop-gate.sh\"",
             "timeout": 30,
             "statusMessage": "Running Neyra kit doctor"
           }
