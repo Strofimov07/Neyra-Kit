@@ -100,9 +100,19 @@ if [ -d "$ROOT/settings/skills" ]; then
     else echo "WARN: project skill '$sid' in settings/skills/ but not surfaced — re-run install.sh"; fi
   done
 fi
-for hc in ".cursor/hooks.json:Cursor" ".codex/hooks.json:Codex"; do
-  f="${hc%%:*}"; n="${hc#*:}"; [ -f "$ROOT/$f" ] && echo "ok: $n hooks config present ($f)"
-done
+[ -f "$ROOT/.cursor/hooks.json" ] && echo "ok: Cursor hooks config present (.cursor/hooks.json)"
+
+codex_template="$KIT/templates/codex/hooks.json"
+codex_installed="$ROOT/.codex/hooks.json"
+if [ -f "$codex_template" ]; then
+  run "Codex hook template" python3 "$KIT/validate-codex-hooks.py" "$codex_template"
+fi
+if [ -f "$codex_installed" ]; then
+  run "Codex installed hooks" python3 "$KIT/validate-codex-hooks.py" "$codex_installed"
+  echo "note: Codex only runs project hooks after their current definitions are reviewed and trusted in /hooks"
+else
+  echo "WARN: no Codex hooks config at .codex/hooks.json — re-run install.sh"
+fi
 
 echo "── codex hook smoke"
 if out="$(NEYRA_HOOK_HOST=codex "$KIT/hooks/session-start.sh" </dev/null)" &&

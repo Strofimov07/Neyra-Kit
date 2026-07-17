@@ -43,6 +43,10 @@ echo "Gate — portable reviewer regression tests:"
 python3 "$KIT_DIR/test-portable-reviewers.py" \
   || { echo "publish blocked: portable reviewer regression test failed" >&2; exit 1; }
 
+echo "Gate — Codex hooks contract regression tests:"
+python3 "$KIT_DIR/test-codex-hooks.py" \
+  || { echo "publish blocked: Codex hooks contract regression test failed" >&2; exit 1; }
+
 echo "Gate — Impeccable live-server security regression tests:"
 command -v node >/dev/null 2>&1 \
   || { echo "publish blocked: node is required for the bundled live-server security regression" >&2; exit 1; }

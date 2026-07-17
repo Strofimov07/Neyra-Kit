@@ -47,7 +47,8 @@ The four hook scripts are shared bash; `hooks/lib/host-io.sh` translates each to
 stdin payload and block protocol, keyed by `NEYRA_HOOK_HOST` (unset = Claude Code, so
 that surface is unchanged). Toggles: `ENABLE_CURSOR_HOOKS`, `ENABLE_CODEX` (default on).
 Claude Code stays the richest surface (subagents + maturest hooks). The Codex
-`hooks.json` registration schema is best-effort — confirm via Codex `/hooks` before relying on it.
+`hooks.json` uses the current nested lifecycle schema. Codex requires each new or
+changed project hook definition to be reviewed and trusted in `/hooks` before it runs.
 
 ## Install into a repo
 ```bash

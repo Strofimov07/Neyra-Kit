@@ -377,7 +377,7 @@ if [[ "${ENABLE_HOOKS}" == "1" ]]; then
     mkdir -p "$tool_dst/hooks/lib"
     if cp "$KIT_DIR"/hooks/*.sh "$tool_dst/hooks/" 2>/dev/null; then chmod +x "$tool_dst"/hooks/*.sh; fi
     cp "$KIT_DIR"/hooks/lib/*.sh "$tool_dst/hooks/lib/" 2>/dev/null || true   # the host I/O shim the hooks source
-    for f in KIT_BOOTSTRAP.md doctor.sh lint-skills.py check-skill-mapping.py test-check-skill-mapping.py test-portable-reviewers.py check-egress.py lint-scope.py test-lint-scope.py check-external-leaks.py test-external-leaks.py lint-plans.py VERSION; do
+    for f in KIT_BOOTSTRAP.md doctor.sh lint-skills.py check-skill-mapping.py test-check-skill-mapping.py test-portable-reviewers.py check-egress.py lint-scope.py test-lint-scope.py check-external-leaks.py test-external-leaks.py lint-plans.py validate-codex-hooks.py VERSION; do
       [[ -f "$KIT_DIR/$f" ]] && cp "$KIT_DIR/$f" "$tool_dst/$f"
     done
     if [[ -d "$KIT_DIR/orchestration" ]]; then mkdir -p "$tool_dst/orchestration"; cp "$KIT_DIR"/orchestration/* "$tool_dst/orchestration/" 2>/dev/null || true; fi   # goal-mode driver + README
@@ -415,16 +415,16 @@ if [[ "${ENABLE_HOOKS}" == "1" ]]; then
     fi
   fi
 
-  # Codex surface — hooks.json (SessionStart/PreToolUse/PostToolUse/Stop). The I/O
-  # contract is confirmed against the docs; the registration-file schema is
-  # best-effort — confirm against a live Codex CLI (/hooks) before relying on it.
+  # Codex surface — current hooks.json schema (event → matcher group → command).
+  # Project hooks are skipped until the user trusts their exact definitions.
   if [[ "${ENABLE_CODEX:-1}" == "1" ]]; then
     if [[ $DRY -eq 1 ]]; then
       say "[dry] write .codex/hooks.json"
     else
       mkdir -p "$TARGET/.codex"
       cp "$KIT_DIR/templates/codex/hooks.json" "$TARGET/.codex/hooks.json"
-      say "wrote .codex/hooks.json (confirm schema via Codex /hooks)"
+      say "wrote .codex/hooks.json"
+      say "Codex: open /hooks, then review and trust the project hooks before relying on them"
     fi
   fi
 fi
