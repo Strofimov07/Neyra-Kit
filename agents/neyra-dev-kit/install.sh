@@ -377,7 +377,7 @@ if [[ "${ENABLE_HOOKS}" == "1" ]]; then
     mkdir -p "$tool_dst/hooks/lib"
     if cp "$KIT_DIR"/hooks/*.sh "$tool_dst/hooks/" 2>/dev/null; then chmod +x "$tool_dst"/hooks/*.sh; fi
     cp "$KIT_DIR"/hooks/lib/*.sh "$tool_dst/hooks/lib/" 2>/dev/null || true   # the host I/O shim the hooks source
-    for f in KIT_BOOTSTRAP.md doctor.sh lint-skills.py check-skill-mapping.py test-check-skill-mapping.py check-egress.py lint-scope.py test-lint-scope.py check-external-leaks.py test-external-leaks.py lint-plans.py VERSION; do
+    for f in KIT_BOOTSTRAP.md doctor.sh lint-skills.py check-skill-mapping.py test-check-skill-mapping.py test-portable-reviewers.py check-egress.py lint-scope.py test-lint-scope.py check-external-leaks.py test-external-leaks.py lint-plans.py VERSION; do
       [[ -f "$KIT_DIR/$f" ]] && cp "$KIT_DIR/$f" "$tool_dst/$f"
     done
     if [[ -d "$KIT_DIR/orchestration" ]]; then mkdir -p "$tool_dst/orchestration"; cp "$KIT_DIR"/orchestration/* "$tool_dst/orchestration/" 2>/dev/null || true; fi   # goal-mode driver + README

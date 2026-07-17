@@ -68,7 +68,7 @@ have a plausible path from attacker-controlled input to impact.
 
 ### 3. Classify against the taxonomy
 
-Check the diff for each, tuned to the Neyra stack:
+Check the diff for each, using the technologies present in the target repo:
 
 - **Injection** — SQL (`.raw()`, `.extra()`, `RawSQL`, string-built queries),
   command (`os.system`, `subprocess(..., shell=True)`), template/log injection.

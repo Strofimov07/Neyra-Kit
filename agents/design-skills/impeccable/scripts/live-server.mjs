@@ -63,6 +63,64 @@ const DESIGN_MD_PATH = PROJECT_CONTEXT.designPath
 const DEFAULT_POLL_TIMEOUT = 600_000;   // 10 min — agent re-polls on timeout anyway
 const SSE_HEARTBEAT_INTERVAL = 30_000;  // keepalive ping every 30s
 
+function parseLoopbackOrigin(value) {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.toLowerCase();
+    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+    if (!['localhost', '127.0.0.1', '[::1]'].includes(host)) return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
+function authorizeBrowserRequest(headers) {
+  if (headers.origin !== undefined) {
+    const origin = parseLoopbackOrigin(headers.origin);
+    return { allowed: !!origin, corsOrigin: origin };
+  }
+
+  if (headers.referer !== undefined) {
+    const origin = parseLoopbackOrigin(headers.referer);
+    return { allowed: !!origin, corsOrigin: null };
+  }
+
+  const fetchSite = String(headers['sec-fetch-site'] || '').toLowerCase();
+  if (fetchSite && !['none', 'same-origin', 'same-site'].includes(fetchSite)) {
+    return { allowed: false, corsOrigin: null };
+  }
+
+  // CLI clients do not send browser provenance headers. They still need the
+  // per-session token on protected endpoints.
+  return { allowed: true, corsOrigin: null };
+}
+
+function isPathWithinRoot(root, candidate) {
+  const relative = path.relative(root, candidate);
+  return relative === '' || (
+    relative !== '..'
+    && !relative.startsWith(`..${path.sep}`)
+    && !path.isAbsolute(relative)
+  );
+}
+
+function resolveWorkspaceSourcePath(filePath) {
+  const root = fs.realpathSync(process.cwd());
+  const candidate = path.resolve(root, filePath);
+  if (!isPathWithinRoot(root, candidate)) return { status: 403 };
+
+  let realCandidate;
+  try {
+    realCandidate = fs.realpathSync(candidate);
+  } catch {
+    return { status: 404 };
+  }
+  if (!isPathWithinRoot(root, realCandidate)) return { status: 403 };
+  return { status: 200, path: realCandidate };
+}
+
 // ---------------------------------------------------------------------------
 // Port detection
 // ---------------------------------------------------------------------------
@@ -388,7 +446,16 @@ function statOrNull(filePath) {
 function createRequestHandler({ detectScript, liveScriptParts }) {
   return (req, res) => {
     const url = new URL(req.url, `http://localhost:${state.port}`);
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    const browserRequest = authorizeBrowserRequest(req.headers);
+    if (!browserRequest.allowed) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Forbidden origin');
+      return;
+    }
+    if (browserRequest.corsOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', browserRequest.corsOrigin);
+      res.setHeader('Vary', 'Origin');
+    }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
@@ -601,11 +668,12 @@ function createRequestHandler({ detectScript, liveScriptParts }) {
       const token = url.searchParams.get('token');
       if (token !== state.token) { res.writeHead(401); res.end('Unauthorized'); return; }
       const filePath = url.searchParams.get('path');
-      if (!filePath || filePath.includes('..')) { res.writeHead(400); res.end('Bad path'); return; }
-      const absPath = path.resolve(process.cwd(), filePath);
-      if (!absPath.startsWith(process.cwd())) { res.writeHead(403); res.end('Forbidden'); return; }
+      if (!filePath || filePath.includes('\0')) { res.writeHead(400); res.end('Bad path'); return; }
+      const resolved = resolveWorkspaceSourcePath(filePath);
+      if (resolved.status === 403) { res.writeHead(403); res.end('Forbidden'); return; }
+      if (resolved.status === 404) { res.writeHead(404); res.end('File not found'); return; }
       let content;
-      try { content = fs.readFileSync(absPath, 'utf-8'); }
+      try { content = fs.readFileSync(resolved.path, 'utf-8'); }
       catch { res.writeHead(404); res.end('File not found'); return; }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(content);

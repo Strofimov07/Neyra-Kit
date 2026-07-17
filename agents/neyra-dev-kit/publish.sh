@@ -39,6 +39,16 @@ echo "Gate — skill-mapping consumer regression tests:"
 python3 "$KIT_DIR/test-check-skill-mapping.py" \
   || { echo "publish blocked: skill-mapping consumer regression test failed" >&2; exit 1; }
 
+echo "Gate — portable reviewer regression tests:"
+python3 "$KIT_DIR/test-portable-reviewers.py" \
+  || { echo "publish blocked: portable reviewer regression test failed" >&2; exit 1; }
+
+echo "Gate — Impeccable live-server security regression tests:"
+command -v node >/dev/null 2>&1 \
+  || { echo "publish blocked: node is required for the bundled live-server security regression" >&2; exit 1; }
+node --test "$MONOREPO/agents/design-skills/impeccable/scripts/live-server.security.test.mjs" \
+  || { echo "publish blocked: bundled live-server security regression failed" >&2; exit 1; }
+
 echo "Gate — lint-scope regression tests:"
 python3 "$KIT_DIR/test-lint-scope.py" \
   || { echo "publish blocked: lint-scope regression test failed" >&2; exit 1; }

@@ -17,11 +17,19 @@ run() { local label="$1"; shift; echo "── $label"; if ! "$@"; then fail=1; f
 echo "neyra-dev-kit doctor v$(cat "$KIT/VERSION") — $ROOT"
 run "skills lint"          python3 "$KIT/lint-skills.py"
 run "skill-mapping regression" python3 "$KIT/test-check-skill-mapping.py"
+run "portable-reviewer regression" python3 "$KIT/test-portable-reviewers.py"
 run "skill↔subagent map"   python3 "$KIT/check-skill-mapping.py"
 run "plans lint"           python3 "$KIT/lint-plans.py"
 run "bundled-skill egress" python3 "$KIT/check-egress.py"
 run "scope-lint regression" python3 "$KIT/test-lint-scope.py"
 run "external-leak regression" python3 "$KIT/test-external-leaks.py"
+if [ -f "$ROOT/agents/design-skills/impeccable/scripts/live-server.security.test.mjs" ]; then
+  if command -v node >/dev/null 2>&1; then
+    run "impeccable live security" node --test "$ROOT/agents/design-skills/impeccable/scripts/live-server.security.test.mjs"
+  else
+    echo "WARN: node not found — skip Impeccable live-server security regression"
+  fi
+fi
 
 echo "── branch hygiene"
 # Merged branches must not accumulate on origin (pr-hygiene: "Clean up after

@@ -62,9 +62,10 @@ silently. This skill is the active half between `pr-hygiene` (opens the PR) and
 
   ```bash
   # Inline findings — note the [bot] suffix on the REST user.login
-  gh api "repos/:owner/:repo/pulls/<PR>/comments?per_page=100" \
+  gh api "repos/{owner}/{repo}/pulls/<PR>/comments?per_page=100" \
     --jq '.[] | select(.user.login=="cursor[bot]")
-          | "• [\([scan("High Severity|Medium Severity|Low Severity")][0] // "?")] \(.path):\(.line // .original_line)"'
+          | ([.body | scan("High Severity|Medium Severity|Low Severity")][0] // "?") as $severity
+          | "• [\($severity)] \(.path):\(.line // .original_line)\n\(.body)"'
   ```
 
 **Success criteria**
