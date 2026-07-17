@@ -33,7 +33,8 @@ Move destinations had the same blind spot.
 **Decision.** Treat edited paths as a collection at the shared host boundary.
 Enumerate every Add/Update/Delete header and move destination, make guards reject
 the operation when any path is managed, and make formatters visit every existing
-code path. Ship the regression suite into consumers and run it from `doctor.sh`.
+code path. Run the full regression suite from canonical `doctor.sh`; ship a
+self-contained multi-file smoke in the consumer `doctor.sh` copy.
 
 **Consequence.** Multi-file Codex edits now receive the same protection and
 formatting coverage as separate Claude Code edits. Invalid or unparsable hook
