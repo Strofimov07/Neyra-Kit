@@ -12,13 +12,13 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$DIR/lib/host-io.sh"
 nk_load
 
-path="$(nk_edit_path)"
-{ [ -z "$path" ] || [ ! -f "$path" ]; } && exit 0
-
 have() { command -v "$1" >/dev/null 2>&1; }
-case "$path" in
-  *.py)                   have ruff && ruff format "$path" >/dev/null 2>&1 || true ;;
-  *.swift)                have swiftformat && swiftformat "$path" >/dev/null 2>&1 || true ;;
-  *.ts|*.tsx|*.js|*.jsx)  have prettier && prettier -w "$path" >/dev/null 2>&1 || true ;;
-esac
+while IFS= read -r path; do
+  { [ -z "$path" ] || [ ! -f "$path" ]; } && continue
+  case "$path" in
+    *.py)                   have ruff && ruff format "$path" >/dev/null 2>&1 || true ;;
+    *.swift)                have swiftformat && swiftformat "$path" >/dev/null 2>&1 || true ;;
+    *.ts|*.tsx|*.js|*.jsx)  have prettier && prettier -w "$path" >/dev/null 2>&1 || true ;;
+  esac
+done < <(nk_edit_paths)
 exit 0
