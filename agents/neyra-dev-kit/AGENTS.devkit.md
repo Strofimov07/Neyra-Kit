@@ -30,6 +30,7 @@ start with `test-first` — a failing test (RED) before the change.
 | trust-boundary-review | trust-boundary-review | AI action / sensitive data / destructive flow |
 | kit-evolution | kit-evolution | end of task / recurring correction — evolve the kit |
 | post-merge-watch | post-merge-watch | after a merge lands — watch the triggered CI/CD, surface red in the same turn |
+| pr-review-watch | pr-review-watch | after a PR opens/pushes — watch its automated reviewers (Bugbot/CI), surface findings by severity |
 | migration-safety | migration-safety | diff touches migrations/ or model fields — locks, expand/contract, rollback |
 | spec-elicitation | spec-elicitation | fuzzy task — elicit a developer-ready spec (EARS) |
 | writing-plans | writing-plans | multi-step change — granular plan artifact before code |
@@ -59,4 +60,4 @@ start with `test-first` — a failing test (RED) before the change.
 - Typed-contract convention: {{CONTRACT_STACK}}
 - Linear workspace: {{LINEAR_WORKSPACE}} (every issue MUST have a project — see `linear-router`).
 
-<!-- kit-version: 0.20.0 -->
+<!-- kit-version: 0.26.1 -->

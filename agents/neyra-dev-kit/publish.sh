@@ -11,6 +11,7 @@
 # the scoping rule in settings/README.md.
 #
 # Ships: agents/dev-skills/, agents/product-skills/, agents/mgmt-skills/,
+# agents/design-skills/ (bundled auto-inject Skills, third-party MIT, license retained),
 # agents/neyra-dev-kit/ (tooling + example configs only — real configs live
 # in the consumer's settings/), .claude/agents/, README.md (rendered from
 # templates/EXTERNAL_README.md — the external root README is canon-managed,
@@ -34,9 +35,31 @@ remote_url="$(git -C "$EXT" remote get-url origin 2>/dev/null || true)"
 
 echo "publish neyra-dev-kit v$VERSION → $EXT"
 
+echo "Gate — skill-mapping consumer regression tests:"
+python3 "$KIT_DIR/test-check-skill-mapping.py" \
+  || { echo "publish blocked: skill-mapping consumer regression test failed" >&2; exit 1; }
+
+echo "Gate — portable reviewer regression tests:"
+python3 "$KIT_DIR/test-portable-reviewers.py" \
+  || { echo "publish blocked: portable reviewer regression test failed" >&2; exit 1; }
+
+echo "Gate — Impeccable live-server security regression tests:"
+command -v node >/dev/null 2>&1 \
+  || { echo "publish blocked: node is required for the bundled live-server security regression" >&2; exit 1; }
+node --test "$MONOREPO/agents/design-skills/impeccable/scripts/live-server.security.test.mjs" \
+  || { echo "publish blocked: bundled live-server security regression failed" >&2; exit 1; }
+
+echo "Gate — lint-scope regression tests:"
+python3 "$KIT_DIR/test-lint-scope.py" \
+  || { echo "publish blocked: lint-scope regression test failed" >&2; exit 1; }
+
 echo "Gate — lint-scope (generic layers must carry zero project facts):"
-python3 "$KIT_DIR/lint-scope.py" "$MONOREPO/agents/dev-skills" "$MONOREPO/agents/product-skills" "$MONOREPO/agents/mgmt-skills" \
+python3 "$KIT_DIR/lint-scope.py" "$MONOREPO/agents/dev-skills" "$MONOREPO/agents/product-skills" "$MONOREPO/agents/mgmt-skills" "$MONOREPO/agents/design-skills" \
   || { echo "publish blocked: fix the leaks (move facts to settings/, see settings/README.md)" >&2; exit 1; }
+
+echo "Gate — no vendor phone-home in bundled skills:"
+python3 "$KIT_DIR/check-egress.py" "$MONOREPO/agents/design-skills" \
+  || { echo "publish blocked: a bundled skill would phone home — re-apply the patch (agents/design-skills/IMPECCABLE.md)" >&2; exit 1; }
 
 run() { if [[ $DRY -eq 1 ]]; then echo "  [dry] $*"; else "$@"; fi; }
 
@@ -44,6 +67,7 @@ echo "Sync layers:"
 run rsync -a --delete "$MONOREPO/agents/dev-skills/" "$EXT/agents/dev-skills/"
 run rsync -a --delete "$MONOREPO/agents/product-skills/" "$EXT/agents/product-skills/"
 run rsync -a --delete "$MONOREPO/agents/mgmt-skills/" "$EXT/agents/mgmt-skills/"
+run rsync -a --delete "$MONOREPO/agents/design-skills/" "$EXT/agents/design-skills/"
 # Kit tooling: exclude real per-repo configs (settings/ owns those in each
 # consumer), bytecode, internal decision history / signal log, and internal
 # research notes (spikes/).
@@ -54,6 +78,7 @@ run rsync -a --delete --exclude 'configs/*' --exclude '__pycache__' --exclude '*
 # mtime granularity: a same-size file rewritten within the same second is
 # silently skipped, which shipped a stale stamp once).
 run cp "$KIT_DIR/VERSION" "$EXT/agents/neyra-dev-kit/VERSION"
+run cp "$KIT_DIR/VERSION" "$EXT/.neyra-dev-kit.version"
 run mkdir -p "$EXT/agents/neyra-dev-kit/configs"
 for ex in "$MONOREPO/agents/neyra-dev-kit/configs/"_*.example.sh; do
   [[ -f "$ex" ]] && run cp "$ex" "$EXT/agents/neyra-dev-kit/configs/"
@@ -121,21 +146,12 @@ run cp "$KIT_DIR/templates/CONNECTORS.example.md" "$EXT/settings/CONNECTORS.exam
 [[ $DRY -eq 1 ]] && { echo "(dry-run: nothing committed; leak check runs on real publish)"; exit 0; }
 
 echo "External leak check (all file types, generic + local patterns):"
-# Literals split ('feedback''_') so this shipped script never matches itself.
-LEAK_RE='mcp__[0-9a-f]{8}-|notion\.so/[0-9a-f]{16}|docs/memory''-bank|feedback''_|(^|[^0-9.v])[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}([^0-9.]|$)'
+LEAK_ARGS=("$EXT")
 if [[ -f "$KIT_DIR/lint-scope.local.txt" ]]; then
-  while IFS= read -r pat; do
-    [[ -z "$pat" || "$pat" == \#* ]] && continue
-    LEAK_RE="$LEAK_RE|$pat"
-  done < "$KIT_DIR/lint-scope.local.txt"
+  LEAK_ARGS+=(--extra-patterns "$KIT_DIR/lint-scope.local.txt")
 fi
-if leaks="$(grep -rInE "$LEAK_RE" "$EXT" --exclude-dir=.git 2>/dev/null | grep -v '^\s*$')"; then
-  echo "$leaks" | head -10
-  echo "publish blocked: internal references in the external tree (above)" >&2
-  exit 1
-else
-  echo "  clean"
-fi
+python3 "$KIT_DIR/check-external-leaks.py" "${LEAK_ARGS[@]}" \
+  || { echo "publish blocked: internal references in the external tree (above)" >&2; exit 1; }
 
 # Prune paths superseded by renames — rsync --delete only cleans inside the
 # dirs it syncs, not stale siblings left behind by a rename.
@@ -148,6 +164,8 @@ if [[ $DRY -eq 1 ]]; then echo "(dry-run: nothing committed)"; exit 0; fi
 
 ext_ver="$(cat "$EXT/agents/neyra-dev-kit/VERSION" 2>/dev/null || echo missing)"
 [[ "$ext_ver" == "$VERSION" ]] || { echo "error: external VERSION '$ext_ver' != '$VERSION' after sync — investigate before committing" >&2; exit 1; }
+ext_stamp="$(cat "$EXT/.neyra-dev-kit.version" 2>/dev/null || echo missing)"
+[[ "$ext_stamp" == "$VERSION" ]] || { echo "error: external consumer stamp '$ext_stamp' != '$VERSION' after sync — investigate before committing" >&2; exit 1; }
 
 if [[ -z "$(git -C "$EXT" status --porcelain)" ]]; then
   echo "external already up to date with v$VERSION — nothing to commit"

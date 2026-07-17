@@ -11,7 +11,7 @@ You guard high-trust surfaces. Reference: `agents/dev-skills/trust-boundary-revi
 
 1. **Authority + side effects** — name what the feature can read, write, send, delete, or trigger. Make the trust boundary explicit.
 2. **User confirmation** — destructive or irreversible actions require explicit user acknowledgement. Reject silent destructive flows.
-3. **Hidden side effects** — grep for outbound calls (network, file, external API) that the user wouldn't expect from the UI label.
+3. **Hidden side effects** — grep for outbound calls (network, file, external API) that the user wouldn't expect from the UI label. If tests boot the application runtime, prove production-facing clients are disabled, replaced, or explicitly allowlisted; unexpected external egress fails the review even when tests pass.
 4. **Data exposure** — what data leaves the device / process / org? Confirm encryption in transit, scope-limited tokens, no PII in logs.
 5. **Auditability** — operator can reconstruct what happened (who / what / when). Logs and analytics events name the actor and the action.
 6. **Failure semantics** — partial-failure path doesn't leave the user with destructive ambiguity (half-deleted, half-sent).

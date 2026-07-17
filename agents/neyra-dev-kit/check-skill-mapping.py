@@ -51,6 +51,11 @@ def check_agents_table(root, dev_skills, agents_dir, is_consumer=False):
             lines, start = ls, s
             break
     if start is None:
+        if is_consumer:
+            # Published/installed consumers do not own the canonical mapping
+            # table. Their shipped subagents are validated from typed file
+            # references below, so absence of host governance docs is expected.
+            return []
         return [
             "mapping table (| dev-skill | subagent | …) not found in AGENTS.md / AGENTS.neyra-devkit.md / CLAUDE.md"
         ]

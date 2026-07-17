@@ -33,9 +33,13 @@ Ensure high-trust features behave safely and transparently.
 ### 3. Check hidden consequences
 
 - Look for silent network actions, background side effects, unexpected persistence, or data sharing.
+- When tests initialize an application runtime, verify production-facing clients
+  are disabled, replaced, or explicitly allowlisted. Unexpected external egress
+  is a failure even when the functional test passes.
 
 **Success criteria**
-- Side effects are transparent enough for the surface's trust model.
+- Side effects are transparent enough for the surface's trust model, and test
+  runtimes do not contact unintended external services.
 
 ### 4. Check auditability
 
@@ -60,3 +64,10 @@ Ensure high-trust features behave safely and transparently.
 - Person-level judgments cannot reach any surface without an explicit human
   verdict, and their data path never crosses into shared reports or
   published artifacts.
+
+## Common rationalizations (and why they're invalid)
+
+| The excuse | Why it's wrong → what to do |
+|---|---|
+| "Tests are harmless." | Hosted and integration tests can boot real application clients. Prove external clients are isolated or explicitly allowlisted. |
+| "The test passed." | Functional success says nothing about hidden egress. Inspect runtime evidence and fail on unexpected external endpoints. |

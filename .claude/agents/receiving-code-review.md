@@ -1,6 +1,6 @@
 ---
 name: receiving-code-review
-description: Disciplined consumption of code-review findings — read without reacting, verify each against the actual code, then implement by severity (blocking/security first). No sycophancy. Use when responding to findings from code-reviewer, spec-review, a human reviewer, or CI, before changing anything in response.
+description: Disciplined consumption of code-review findings — read without reacting, verify each against the actual code, then implement by severity (blocking/security first). No sycophancy. Use when responding to findings from code-reviewer, spec-review, a human reviewer, CI, or an automated PR reviewer like Cursor Bugbot (via pr-review-watch), before changing anything in response.
 tools: Read, Grep, Glob
 model: sonnet
 ---

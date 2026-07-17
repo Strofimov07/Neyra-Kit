@@ -23,6 +23,7 @@ portable:
     - regression-scout
     - release-readiness
     - trust-boundary-review
+    - security-reviewer        # source: dev-skills/security-review
     - analytics-instrumentation
     - kit-evolution            # source: dev-skills/kit-evolution
 

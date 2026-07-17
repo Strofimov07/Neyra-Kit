@@ -20,6 +20,7 @@ of any end-user skill product catalog.
 | [contract-doc-sync](contract-doc-sync/SKILL.md) | Keep backend/platform contract docs synced with code |
 | [regression-scout](regression-scout/SKILL.md) | Nearby regression scan for shared state and adjacent flows |
 | [trust-boundary-review](trust-boundary-review/SKILL.md) | Permission and side-effect safety for high-trust features |
+| [security-review](security-review/SKILL.md) | Adversarial appsec review of a diff: injection, authz/IDOR, secrets, crypto, SSRF, deserialization — exploit-first, false-positive filtered |
 | [batch-migration](batch-migration/SKILL.md) | Large parallelizable migrations, only with explicit delegation approval |
 | [skill-capture](skill-capture/SKILL.md) | Turn repeatable engineering workflows into reusable skills |
 | [pr-hygiene](pr-hygiene/SKILL.md) | Branch / commit / PR mechanics, scoped staging, no AI attribution |
