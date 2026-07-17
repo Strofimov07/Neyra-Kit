@@ -16,8 +16,12 @@ run() { local label="$1"; shift; echo "── $label"; if ! "$@"; then fail=1; f
 
 echo "neyra-dev-kit doctor v$(cat "$KIT/VERSION") — $ROOT"
 run "skills lint"          python3 "$KIT/lint-skills.py"
+run "skill-mapping regression" python3 "$KIT/test-check-skill-mapping.py"
 run "skill↔subagent map"   python3 "$KIT/check-skill-mapping.py"
 run "plans lint"           python3 "$KIT/lint-plans.py"
+run "bundled-skill egress" python3 "$KIT/check-egress.py"
+run "scope-lint regression" python3 "$KIT/test-lint-scope.py"
+run "external-leak regression" python3 "$KIT/test-external-leaks.py"
 
 echo "── branch hygiene"
 # Merged branches must not accumulate on origin (pr-hygiene: "Clean up after
@@ -80,6 +84,14 @@ for pair in "Cursor:.cursor/skills" "Codex:.agents/skills"; do
   name="${pair%%:*}"; dir="${pair#*:}"
   [ -d "$ROOT/$dir" ] && echo "ok: $name skills mirror present ($dir, $(find "$ROOT/$dir" -mindepth 1 -maxdepth 1 2>/dev/null | wc -l | tr -d ' ') entries)"
 done
+if [ -d "$ROOT/settings/skills" ]; then
+  for d in "$ROOT/settings/skills"/*/; do
+    [ -f "${d}SKILL.md" ] || continue
+    sid="$(basename "$d")"
+    if [ -d "$ROOT/.claude/skills/$sid" ]; then echo "ok: project skill '$sid' surfaced (.claude/skills/$sid)"
+    else echo "WARN: project skill '$sid' in settings/skills/ but not surfaced — re-run install.sh"; fi
+  done
+fi
 for hc in ".cursor/hooks.json:Cursor" ".codex/hooks.json:Codex"; do
   f="${hc%%:*}"; n="${hc#*:}"; [ -f "$ROOT/$f" ] && echo "ok: $n hooks config present ($f)"
 done

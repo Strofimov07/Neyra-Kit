@@ -148,6 +148,70 @@ else
   say "synced $n skill dirs"
 fi
 
+# Bundled design skills (kit-authored auto-inject Skills): $BUNDLED_SKILLS_SRC/<id>/ → .claude/skills/<id>/.
+# Manifest opt-in (BUNDLED_SKILLS_SRC, set only by kits that ship them). The canonical dir is also
+# copied into the target's portable layer so the consumer's session-start hook can re-sync it.
+# Synced BEFORE project skills below so a same-named settings/skills/ entry overrides it (project > bundled).
+if [[ -n "${BUNDLED_SKILLS_SRC:-}" && -d "$MONOREPO/$BUNDLED_SKILLS_SRC" ]]; then
+  echo "Bundled skills — $BUNDLED_SKILLS_SRC → .claude/skills/:"
+  CANON_BUNDLED="$MONOREPO/$BUNDLED_SKILLS_SRC"
+  do_ "mkdir -p '$TARGET/$BUNDLED_SKILLS_SRC' '$TARGET/.claude/skills'"
+  if command -v rsync >/dev/null 2>&1; then
+    do_ "rsync -a --delete '$CANON_BUNDLED/' '$TARGET/$BUNDLED_SKILLS_SRC/'"
+  else
+    do_ "cp -R '$CANON_BUNDLED/'* '$TARGET/$BUNDLED_SKILLS_SRC/'"
+  fi
+  bs=0
+  for d in "$CANON_BUNDLED"/*/; do
+    [[ -f "${d}SKILL.md" ]] || continue
+    sid="$(basename "$d")"
+    # sid becomes a path component AND (via do_ → eval) part of a shell command. Kit-authored,
+    # but sanitize anyway — same fail-closed guard as project skills. Reject anything but a plain id.
+    if [[ ! "$sid" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+      say "WARN: skipping bundled skill dir with unsafe name: $sid"
+      continue
+    fi
+    if command -v rsync >/dev/null 2>&1; then
+      do_ "rsync -a --delete '$d' '$TARGET/.claude/skills/$sid/'"
+    else
+      do_ "mkdir -p '$TARGET/.claude/skills/$sid' && cp -R '${d}.' '$TARGET/.claude/skills/$sid/'"
+    fi
+    bs=$((bs+1))
+  done
+  say "synced $bs bundled skill(s) → .claude/skills/ (source: $BUNDLED_SKILLS_SRC; .claude copy generated — never hand-edit)"
+fi
+
+# Project-owned skills: settings/skills/<id>/ (tracked, kit never authors) → .claude/skills/<id>/
+# (generated, gitignored). Same rsync --delete idiom as canon skills above; source of truth
+# stays in settings/skills/, the .claude copy is regenerated each run — never hand-edited.
+echo "Project skills — settings/skills/ → .claude/skills/ (repo-owned):"
+PROJ_SKILLS="$TARGET/settings/skills"
+if [[ -d "$PROJ_SKILLS" ]]; then
+  do_ "mkdir -p '$TARGET/.claude/skills'"
+  ps=0
+  for d in "$PROJ_SKILLS"/*/; do
+    [[ -f "${d}SKILL.md" ]] || continue
+    sid="$(basename "$d")"
+    # settings/skills/<id>/ is repo-checked-in and may come from a less-trusted PR.
+    # sid becomes a path component AND (via do_ → eval below) part of a shell command,
+    # so a crafted dir name like  a'$(touch pwned)b  would break out and execute.
+    # Reject anything but a plain skill id — fail closed, skip the offender.
+    if [[ ! "$sid" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+      say "WARN: skipping project skill dir with unsafe name: $sid"
+      continue
+    fi
+    if command -v rsync >/dev/null 2>&1; then
+      do_ "rsync -a --delete '$d' '$TARGET/.claude/skills/$sid/'"
+    else
+      do_ "mkdir -p '$TARGET/.claude/skills/$sid' && cp -R '${d}.' '$TARGET/.claude/skills/$sid/'"
+    fi
+    ps=$((ps+1))
+  done
+  say "synced $ps project skill(s) → .claude/skills/ (source in settings/skills/; .claude copy is generated — never hand-edit)"
+else
+  say "no settings/skills/ — nothing to sync (add settings/skills/<id>/SKILL.md for a project-owned skill)"
+fi
+
 echo "Layer A — portable subagents:"
 do_ "mkdir -p '$TARGET/.claude/agents'"
 for a in "${PORTABLE_AGENTS[@]}"; do
@@ -273,6 +337,34 @@ for srv in "${MCP_SERVERS[@]}"; do
   fi
 done
 
+# Project-owned MCP connectors: settings/mcp/<name>.mcp.json.tmpl (tracked, declarative) →
+# jq-merged into .mcp.json. Same primitive as the neyra server above; CONNECTORS.md stays
+# human-readable prose, the .tmpl is the machine-readable registration. Templates are static
+# JSON — secrets/paths stay as ${ENV} placeholders (Claude Code expands at runtime; no
+# install-time {{token}} substitution, so any server shape works without touching render()).
+echo "Project MCP connectors — settings/mcp/*.mcp.json.tmpl → .mcp.json:"
+PROJ_MCP="$TARGET/settings/mcp"
+if [[ -d "$PROJ_MCP" ]]; then
+  for tf in "$PROJ_MCP"/*.mcp.json.tmpl; do
+    [[ -e "$tf" ]] || continue
+    name="$(basename "$tf" .mcp.json.tmpl)"
+    dest="$TARGET/.mcp.json"
+    if [[ $DRY -eq 1 ]]; then
+      say "[dry] merge '$name' server into $dest"
+    elif [[ -f "$dest" ]] && command -v jq >/dev/null 2>&1; then
+      cp "$dest" "$dest.bak"
+      tmp="$(mktemp)"
+      if jq -s '.[0] * .[1]' "$dest" "$tf" > "$tmp"; then mv "$tmp" "$dest"; else rm -f "$tmp"; echo "error: jq merge failed for '$name'; .mcp.json unchanged (backup .mcp.json.bak)" >&2; exit 1; fi
+      say "merged '$name' into .mcp.json (backup .mcp.json.bak; other servers preserved)"
+    else
+      cp "$tf" "$dest"; say "wrote $dest ('$name')"
+    fi
+    grep -qxF '.mcp.json' "$TARGET/.gitignore" 2>/dev/null || printf '.mcp.json\n' >> "$TARGET/.gitignore"
+  done
+else
+  say "no settings/mcp/ — nothing to generate (add settings/mcp/<name>.mcp.json.tmpl to register a project MCP server; document it in settings/CONNECTORS.md)"
+fi
+
 # Hooks + bootstrap — deterministic enforcement surfaces (NEB-1321/1316).
 # Copies the self-contained tooling the hooks depend on, then wires the hooks into
 # the target's .claude/settings.json (append, never clobber; idempotent).
@@ -285,7 +377,7 @@ if [[ "${ENABLE_HOOKS}" == "1" ]]; then
     mkdir -p "$tool_dst/hooks/lib"
     if cp "$KIT_DIR"/hooks/*.sh "$tool_dst/hooks/" 2>/dev/null; then chmod +x "$tool_dst"/hooks/*.sh; fi
     cp "$KIT_DIR"/hooks/lib/*.sh "$tool_dst/hooks/lib/" 2>/dev/null || true   # the host I/O shim the hooks source
-    for f in KIT_BOOTSTRAP.md doctor.sh lint-skills.py check-skill-mapping.py lint-plans.py VERSION; do
+    for f in KIT_BOOTSTRAP.md doctor.sh lint-skills.py check-skill-mapping.py test-check-skill-mapping.py check-egress.py lint-scope.py test-lint-scope.py check-external-leaks.py test-external-leaks.py lint-plans.py VERSION; do
       [[ -f "$KIT_DIR/$f" ]] && cp "$KIT_DIR/$f" "$tool_dst/$f"
     done
     if [[ -d "$KIT_DIR/orchestration" ]]; then mkdir -p "$tool_dst/orchestration"; cp "$KIT_DIR"/orchestration/* "$tool_dst/orchestration/" 2>/dev/null || true; fi   # goal-mode driver + README

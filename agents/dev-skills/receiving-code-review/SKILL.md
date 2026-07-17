@@ -6,7 +6,8 @@ description: >-
   reflexive agreement.
 when_to_use: >-
   Use when responding to review findings (from `code-reviewer`, `spec-review`, a
-  human reviewer, or CI) — before changing anything in response to feedback.
+  human reviewer, CI, or an automated PR reviewer like Cursor Bugbot — fetched by
+  `pr-review-watch`) — before changing anything in response to feedback.
 tools: Read, Grep, Glob
 model: sonnet
 ---

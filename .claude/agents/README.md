@@ -22,10 +22,12 @@ install.sh from agents/neyra-dev-kit/templates/, not stored here.
 | [parallel-lanes](parallel-lanes.md) | Gives each simultaneously-running agent its own isolated lane — one git worktree (or at least one branch + explicit-path commits), one Lin |
 | [portfolio-pmo](portfolio-pmo.md) | Portfolio-level PMO for cross-team planning — dependency graph from the tracker, deduplicated RAID register (Risks/Assumptions/Issues/Depe |
 | [post-merge-watch](post-merge-watch.md) | Watches CI/CD after a human-approved merge lands — polls the triggered pipelines for a bounded window, surfaces failures in the same turn, |
+| [pr-review-watch](pr-review-watch.md) | After a PR is opened or pushed, watches for the repo's automated PR reviewers (Cursor Bugbot, CI review annotations) — which post asynchro |
 | [product-brainstormer](product-brainstormer.md) | Frames problems before solutions — separates symptoms from root cause, produces explicit hypotheses and assumptions, maintains an open-que |
 | [receiving-code-review](receiving-code-review.md) | Disciplined consumption of code-review findings — read without reacting, verify each against the actual code, then implement by severity ( |
 | [regression-scout](regression-scout.md) | Scans for likely regressions adjacent to a change — permissions, loading/empty/error states, caching, polling, navigation return paths, an |
 | [release-readiness](release-readiness.md) | Final production-readiness pass before declaring a change done — smoke path, rollback thinking, feature flags, monitoring, owner visibilit |
+| [security-reviewer](security-reviewer.md) | Adversarial application-security review of a diff for Swift/iOS and Python/Django/web. Traces untrusted input to dangerous sinks and reports |
 | [solution-designer](solution-designer.md) | Converts problem framing into solution structure — user flows, UX states, interaction semantics, surface fit. |
 | [spec-elicitation](spec-elicitation.md) | Turns a vague request into a developer-ready spec via one-question-at-a-time elicitation, ending in a structured spec with EARS acceptance c |
 | [spec-review](spec-review.md) | Reviews an implementation against its plan / acceptance criteria — every requirement mapped, nothing unrequested added (YAGNI). The confor |

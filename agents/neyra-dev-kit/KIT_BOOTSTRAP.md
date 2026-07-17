@@ -24,7 +24,8 @@ the exact moments skills exist for. When you invoke one, say so in one line:
 2. matrix add-ons for the touched surface — `contract-checker` (endpoints),
    `localization-checker` (user-facing copy), `analytics-instrumentation`
    (behavior/funnel), `design-system-conformance` (UI), `migration-safety`
-   (schema migrations)
+   (schema migrations), `security-reviewer` (auth / crypto / secrets /
+   untrusted input / raw SQL / HTML / WebView / deep links)
 3. `verify-runtime` — strongest practical check on the **real** surface
 4. `release-readiness` + `regression-scout` for high-risk / cross-layer changes
 

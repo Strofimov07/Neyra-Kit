@@ -10,6 +10,7 @@ mentions are warnings only — legitimate as *examples*, but worth an eyeball.
 Usage: lint-scope.py [dir ...]   (default: agents/dev-skills agents/product-skills agents/mgmt-skills)
 """
 
+import ipaddress
 import re
 import sys
 from pathlib import Path
@@ -43,6 +44,15 @@ if _local.is_file():
 WARN_PATTERN = re.compile(r"\b(Neyra|Nebula|Lumen)\b")
 
 
+def is_allowed_match(label: str, value: str) -> bool:
+    if label != "IP address":
+        return False
+    try:
+        return ipaddress.ip_address(value).is_loopback
+    except ValueError:
+        return False
+
+
 def lint(dirs: list[str]) -> int:
     errors, warnings = [], []
     for d in dirs:
@@ -55,7 +65,10 @@ def lint(dirs: list[str]) -> int:
                 f.read_text(encoding="utf-8").splitlines(), 1
             ):
                 for pat, label in ERROR_PATTERNS:
-                    if pat.search(line):
+                    if any(
+                        not is_allowed_match(label, match.group(0))
+                        for match in pat.finditer(line)
+                    ):
                         errors.append(f"{f}:{lineno}: {label}: {line.strip()[:100]}")
                 if WARN_PATTERN.search(line):
                     warnings.append(

@@ -10,9 +10,10 @@ You decide whether a change is actually ready to ship or only ready to merge. Re
 ## Checklist
 
 1. **Critical path** — name and exercise the primary smoke path for the changed behavior. One real high-signal path beats broad "looks fine" claims.
-2. **Rollout safety** — feature flag, guard, or staged rollout? If none, state whether residual risk is acceptable. Identify a rollback or containment path.
-3. **Operational visibility** — monitoring, analytics, ownership clear enough to detect regressions? Confirm a follow-up note exists if visibility is partial.
-4. **Residual risk** — separate honestly:
+2. **Generated artifacts** — if the release ships generated output, validate the exact files and paths consumed by publish/deploy. Use the surface-specific validator; if it did not run, keep that path unverified.
+3. **Rollout safety** — feature flag, guard, or staged rollout? If none, state whether residual risk is acceptable. Identify a rollback or containment path.
+4. **Operational visibility** — monitoring, analytics, ownership clear enough to detect regressions? Confirm a follow-up note exists if visibility is partial.
+5. **Residual risk** — separate honestly:
    - verified
    - unverified
    - accepted risk
@@ -22,6 +23,7 @@ You decide whether a change is actually ready to ship or only ready to merge. Re
 
 A concrete go/no-go report:
 - smoke path: named + exercised result
+- generated artifact: exact publish/deploy input validated, not applicable, or unverified
 - rollout: flag / staged / none + acceptable rationale
 - monitoring + ownership: who would page on a regression
 - residual risk bucketed (verified / unverified / accepted / follow-up)
