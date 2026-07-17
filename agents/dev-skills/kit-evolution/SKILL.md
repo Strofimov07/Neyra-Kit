@@ -28,30 +28,40 @@ This operationalizes the `Self-Improvement Rule` in AGENTS.md as a triggerable l
 - What got corrected, what gate was skipped (and the stated reason), where the
   agent guessed or struggled, what the user had to repeat.
 - One-off or pattern? Check memory + AGENTS.md "Current lessons" before deciding.
-- **Persist it**: append one line to `agents/neyra-dev-kit/signals.log`
-  (`DATE | signal | route | one-off|pattern`). The log is append-only and
-  committed — a signal that lives only in the conversation evaporates with the
-  session. This applies to insights found mid-work too, not only at retro time
-  (bootstrap rule): log first, route later.
+- **Identify the authoring boundary first:** run
+  `python3 agents/neyra-dev-kit/source-policy.py --require-canonical`.
+  - In the canonical Neyra-Kit repo, append one line to
+    `agents/neyra-dev-kit/signals.log`
+    (`DATE | signal | route | one-off|pattern`) before routing.
+  - In a consumer repo, the expected failure means its kit paths are generated:
+    do **not** edit or append inside them. Persist the signal directly in the
+    Neyra Skills Kit Linear project after dedup. If Linear is unavailable, append
+    it to local-only `.neyra/kit-evolution-pending.log`, report the sync debt, and
+    move it to the canonical ledger when access returns.
+- This applies to insights found mid-work too, not only at retro time: persist
+  first, route later.
 
 **Success criteria**
 - The signal is named concretely (not "be better") and classified one-off vs pattern.
-- The signal exists as a `signals.log` line before any routing happens.
+- The signal is durable before routing: canonical `signals.log`, Linear from a
+  consumer, or an explicitly reported local pending entry.
 
 ### 2. Route to the right surface
 
 | Signal | Surface |
 |---|---|
-| A repeatable workflow worth reusing | `skill-capture` → new dev-skill |
-| A recurring mistake or missing rule | AGENTS.md `Lesson → Rule → Checklist hook` |
-| A project fact / preference / decision | memory file (+ MEMORY.md pointer); `decisionLog` for the "why" |
-| A gate that should be enforced, not hoped for | propose a hook / matrix add-on — don't hand-enforce |
-| A skill that didn't fire or over-fired | fix its `description` to a pure "when to load" trigger |
+| A repeatable workflow worth reusing | canonical Neyra-Kit: `skill-capture` → new dev-skill |
+| A recurring mistake or missing rule | canonical Neyra-Kit: AGENTS.md `Lesson → Rule → Checklist hook` |
+| A project fact / preference / decision | consumer memory/settings; canonical `decisionLog` only for shared kit decisions |
+| A gate that should be enforced, not hoped for | canonical Neyra-Kit hook/check — don't hand-enforce in a consumer |
+| A skill that didn't fire or over-fired | canonical Neyra-Kit: fix its `description` to a pure "when to load" trigger |
 
 - **Consumer-demand test (NEB-1406):** an explicit user/consumer statement of
   need satisfies the demand test by itself — never reject a routing solely for
   "no consumer asked" when the requester IS the consumer. Organic evidence is
   for prioritization, not for permission.
+- A consumer may own project-specific facts under `settings/`; that exception
+  never grants it authority to modify shared kit paths.
 
 **Success criteria**
 - The change is routed to exactly one surface, with a one-line justification.
@@ -74,10 +84,11 @@ This operationalizes the `Self-Improvement Rule` in AGENTS.md as a triggerable l
   diff, do not self-merge.**
 - The exact mechanics (source vs. synced copy, registration, VERSION bump,
   re-install, dirty-tree caution) live in `EVOLVING-THE-KIT.md` — follow it.
-- **A VERSION bump ends with a publish to the external kit repo**
-  (`publish.sh <neyra-kit-clone>` — the scope linter gates it). If publishing
-  isn't possible in the same sitting, file the publish as a task in the same
-  turn; internal and external must not drift silently.
+- Require canonical identity again before landing. A VERSION bump is authored,
+  checked, pushed, and reviewed directly in `Strofimov07/Neyra-Kit`; the legacy
+  `publish.sh` path is retired and must fail closed.
+- Consumer upgrades happen only after the canonical revision is reviewed. Do
+  not copy a consumer diff back and call it a release.
 - **File pattern-grade signals in Linear** via `linear-router`: first
   `list_issues` against the kit/harness backlog for an existing open ticket
   covering the same signal — a close match gets a comment/rank-bump, not a
@@ -88,7 +99,8 @@ This operationalizes the `Self-Improvement Rule` in AGENTS.md as a triggerable l
 
 **Success criteria**
 - The change passes the kit's anti-drift checks and (for rules) is surfaced for approval.
-- Internal and external kit VERSION match, or a publish task is filed.
+- The canonical PR contains the VERSION, decision, tests, and signal; any
+  requested consumer rollout is linked as a separate task.
 
 ## Rules
 
@@ -96,4 +108,7 @@ This operationalizes the `Self-Improvement Rule` in AGENTS.md as a triggerable l
 - One-offs go to memory, not to rules — only patterns become rules or skills.
 - Never silently self-modify an enforced rule; surface the proposed diff for approval.
 - Prefer enforcement (hook / check) over exhortation (prose) when the failure is skip-under-pressure.
+- Never author shared kit behavior in a product repository, even when its copy
+  is newer, easier to reach, or the original historical source. Route to the
+  canonical repo first; convenience does not create ownership.
 - This skill proposes and validates kit changes; it does not grant itself authority to land governance changes unreviewed.

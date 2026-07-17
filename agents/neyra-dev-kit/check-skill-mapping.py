@@ -29,12 +29,17 @@ def check_agents_table(root, dev_skills, agents_dir, is_consumer=False):
     """The AGENTS.md '| dev-skill | subagent |' table must match reality:
     every listed subagent exists, every dev-skill is listed, manual rows match MANUAL."""
     errs = []
-    # The table lives in AGENTS.md in the monorepo, but in a consumer repo the kit
+    # The table lives in AGENTS.md in the canonical repo, but in a consumer repo the kit
     # renders it into AGENTS.neyra-devkit.md (or it may be in CLAUDE.md). Use the
     # first candidate that actually contains the table header.
     lines = []
     start = None
-    for cand in ("AGENTS.md", "AGENTS.neyra-devkit.md", "CLAUDE.md"):
+    for cand in (
+        "AGENTS.md",
+        "AGENTS.neyra-devkit.md",
+        "agents/neyra-dev-kit/AGENTS.devkit.md",
+        "CLAUDE.md",
+    ):
         p = os.path.join(root, cand)
         if not os.path.isfile(p):
             continue
@@ -79,13 +84,18 @@ def check_agents_table(root, dev_skills, agents_dir, is_consumer=False):
         else:
             sub = target.strip("`").strip()
             if not os.path.isfile(os.path.join(agents_dir, sub + ".md")):
-                if is_consumer and sub in TEMPLATED:
-                    # Templated agents are opt-in per consumer config
-                    # (ENABLE_* flags / LINEAR_MCP_PREFIX) — absence means
-                    # disabled at install, not drift.
+                template = os.path.join(
+                    root,
+                    "agents/neyra-dev-kit/templates/agents",
+                    sub + ".md.tmpl",
+                )
+                if sub in TEMPLATED and (is_consumer or os.path.isfile(template)):
+                    # Templated agents are rendered per consumer config. In the
+                    # canonical repo the template itself is the source; in a
+                    # consumer absence means the agent was disabled at install.
                     print(
-                        "note: templated agent '%s' not installed "
-                        "(disabled in this repo's config)" % sub
+                        "note: templated agent '%s' validated from its template/config"
+                        % sub
                     )
                 else:
                     errs.append(
@@ -122,11 +132,23 @@ def main():
         text = open(os.path.join(agents_dir, f), encoding="utf-8").read()
         referenced.update(REF_RE.findall(text))
 
+    templates_dir = os.path.join(root, "agents/neyra-dev-kit/templates/agents")
+    if os.path.isdir(templates_dir):
+        for f in os.listdir(templates_dir):
+            if not f.endswith(".md.tmpl"):
+                continue
+            text = open(os.path.join(templates_dir, f), encoding="utf-8").read()
+            referenced.update(REF_RE.findall(text))
+
     # In a consumer repo (kit installed via install.sh) skills are copied wholesale
     # but only a curated subset of subagents is — so "orphan skill" and "every skill
     # must be in the table" are expected, not drift. Detect the consumer by the
-    # installer's version stamp and relax those checks there (keep dangling-ref).
-    is_consumer = os.path.isfile(os.path.join(root, ".neyra-dev-kit.version"))
+    # canonical source stamp and absence of the canonical marker. Version alone is
+    # insufficient: the canonical repo also carries VERSION metadata and must stay
+    # strict rather than silently relaxing its authoring checks.
+    is_consumer = os.path.isfile(
+        os.path.join(root, ".neyra-dev-kit.source")
+    ) and not os.path.isfile(os.path.join(root, ".neyra-kit-canonical"))
 
     errs = []
     # 1. orphan dev-skills (no subagent, not manual) — canonical repo only

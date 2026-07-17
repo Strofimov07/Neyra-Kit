@@ -2,7 +2,7 @@
 """Scope linter: generic kit layers must contain zero project facts.
 
 Scans agents/dev-skills/, agents/product-skills/, and agents/mgmt-skills/ (the layers published to the
-external Neyra-Kit repo) for project-specific facts that belong in settings/:
+canonical Neyra-Kit repo) for project-specific facts that belong in settings/:
 IP addresses, MCP server-instance hashes, Notion page hashes, and known internal
 server/db names. Errors fail the run (pre-commit + publish gate). Brand-name
 mentions are warnings only — legitimate as *examples*, but worth an eyeball.

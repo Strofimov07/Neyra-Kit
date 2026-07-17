@@ -15,6 +15,18 @@ fail=0
 run() { local label="$1"; shift; echo "── $label"; if ! "$@"; then fail=1; fi; }
 
 echo "neyra-dev-kit doctor v$(cat "$KIT/VERSION") — $ROOT"
+echo "── source policy"
+if [ -f "$ROOT/.neyra-kit-canonical" ]; then
+  run "canonical authoring identity" python3 "$KIT/source-policy.py" --root "$ROOT" --require-canonical
+elif [ -f "$ROOT/.neyra-dev-kit.source" ]; then
+  run "consumer source identity" python3 "$KIT/source-policy.py" --root "$ROOT"
+else
+  echo "WARN: no canonical marker or consumer source stamp — re-install from Neyra-Kit"
+fi
+if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; then
+  run "source-policy regression" python3 "$KIT/test-source-policy.py"
+  run "canonical leak scan" python3 "$KIT/check-external-leaks.py" "$ROOT"
+fi
 run "skills lint"          python3 "$KIT/lint-skills.py"
 run "skill-mapping regression" python3 "$KIT/test-check-skill-mapping.py"
 run "portable-reviewer regression" python3 "$KIT/test-portable-reviewers.py"
@@ -63,8 +75,14 @@ else
 fi
 
 echo "── decisionLog"
-if [ -f "$KIT/decisionLog.md" ]; then echo "ok: decisionLog.md present"
-else echo "note: no decisionLog.md yet (optional per-repo ADR — create on first durable decision)"; fi
+if [ -f "$KIT/decisionLog.md" ]; then
+  echo "ok: decisionLog.md present"
+elif [ -f "$ROOT/.neyra-kit-canonical" ]; then
+  echo "FAIL: canonical Neyra-Kit requires decisionLog.md"
+  fail=1
+else
+  echo "note: decisionLog.md is canonical-source history and is not copied to consumers"
+fi
 
 # NEB-1375: the governance fragment's version footer must match VERSION —
 # a stale footer means the fragment (or the stamp) didn't ship with the bump.
