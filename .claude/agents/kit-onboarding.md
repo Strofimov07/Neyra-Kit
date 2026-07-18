@@ -61,5 +61,7 @@ never re-ask what's filled in; confirm, don't interrogate).
   inert because of it).
 - Secrets (API keys, tokens) never go into settings/ — env vars only; say so
   when the topic comes up.
-- Finish by logging one line to `agents/neyra-dev-kit/signals.log` if any
-  interview question exposed a kit gap (missing default, unclear question).
+- If onboarding exposes a shared kit gap, persist it in the Neyra Skills Kit
+  Linear project (or `.neyra/kit-evolution-pending.log` while offline). Do not
+  append to the consumer's generated kit files; only canonical Neyra-Kit owns
+  `agents/neyra-dev-kit/signals.log`.

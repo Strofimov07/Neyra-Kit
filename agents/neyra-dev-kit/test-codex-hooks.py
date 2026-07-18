@@ -2,6 +2,7 @@
 """Regression tests for the published Codex hook registration contract."""
 
 import json
+import os
 import pathlib
 import subprocess
 import tempfile
@@ -10,6 +11,7 @@ import unittest
 
 KIT = pathlib.Path(__file__).resolve().parent
 TEMPLATE = KIT / "templates" / "codex" / "hooks.json"
+HOOKS = KIT / "hooks"
 
 
 class CodexHookConfigTests(unittest.TestCase):
@@ -90,6 +92,143 @@ class CodexHookConfigTests(unittest.TestCase):
     def test_doctor_runs_the_codex_config_validator(self):
         doctor = (KIT / "doctor.sh").read_text(encoding="utf-8")
         self.assertIn("validate-codex-hooks.py", doctor)
+        self.assertIn("test-codex-hooks.py", doctor)
+        self.assertIn(
+            r'*** Update File: src/allowed.py\n@@\n-old\n+new\n*** Update File: AGENTS.neyra-devkit.md',
+            doctor,
+        )
+
+    def test_guard_blocks_any_managed_path_in_multifile_apply_patch(self):
+        payload = {
+            "tool_input": {
+                "command": """*** Begin Patch
+*** Update File: src/allowed.py
+@@
+-old
++new
+*** Update File: AGENTS.neyra-devkit.md
+@@
+-old
++new
+*** End Patch
+"""
+            }
+        }
+        result = subprocess.run(
+            [str(HOOKS / "pre-tool-use-guard.sh")],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "NEYRA_HOOK_HOST": "codex"},
+        )
+
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("AGENTS.neyra-devkit.md", result.stderr)
+
+    def test_formatter_visits_every_path_in_multifile_apply_patch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / "first.py").write_text("x=1\n", encoding="utf-8")
+            (root / "second.py").write_text("y=2\n", encoding="utf-8")
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            log = root / "ruff.log"
+            ruff = bin_dir / "ruff"
+            ruff.write_text(
+                '#!/usr/bin/env bash\nprintf \'%s\\n\' "$*" >> "$NEYRA_RUFF_LOG"\n',
+                encoding="utf-8",
+            )
+            ruff.chmod(0o755)
+            payload = {
+                "tool_input": {
+                    "command": """*** Begin Patch
+*** Update File: first.py
+@@
+-x = 1
++x=1
+*** Update File: second.py
+@@
+-y = 2
++y=2
+*** End Patch
+"""
+                }
+            }
+            result = subprocess.run(
+                [str(HOOKS / "post-tool-use-format.sh")],
+                input=json.dumps(payload),
+                capture_output=True,
+                text=True,
+                check=False,
+                cwd=root,
+                env={
+                    **os.environ,
+                    "NEYRA_HOOK_HOST": "codex",
+                    "NEYRA_RUFF_LOG": str(log),
+                    "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+                },
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(
+                log.read_text(encoding="utf-8").splitlines(),
+                ["format first.py", "format second.py"],
+            )
+
+    def test_guard_blocks_managed_move_destination(self):
+        payload = {
+            "tool_input": {
+                "command": """*** Begin Patch
+*** Update File: src/allowed.py
+*** Move to: AGENTS.neyra-devkit.md
+@@
+-old
++new
+*** End Patch
+"""
+            }
+        }
+        result = subprocess.run(
+            [str(HOOKS / "pre-tool-use-guard.sh")],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "NEYRA_HOOK_HOST": "codex"},
+        )
+
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("AGENTS.neyra-devkit.md", result.stderr)
+
+    def test_guard_blocks_codex_explicit_file_path(self):
+        result = subprocess.run(
+            [str(HOOKS / "pre-tool-use-guard.sh")],
+            input=json.dumps(
+                {"tool_input": {"file_path": "AGENTS.neyra-devkit.md"}}
+            ),
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "NEYRA_HOOK_HOST": "codex"},
+        )
+
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("AGENTS.neyra-devkit.md", result.stderr)
+
+    def test_guard_denies_cursor_file_path(self):
+        result = subprocess.run(
+            [str(HOOKS / "pre-tool-use-guard.sh")],
+            input=json.dumps({"file_path": "AGENTS.neyra-devkit.md"}),
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "NEYRA_HOOK_HOST": "cursor"},
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(result.stdout, "Cursor guard returned no permission payload")
+        self.assertEqual(json.loads(result.stdout)["permission"], "deny")
 
 
 if __name__ == "__main__":

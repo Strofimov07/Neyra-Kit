@@ -6,9 +6,18 @@
 
 # You have the Neyra dev-kit — read this first
 
-This repo ships the shared Neyra engineering skill stack: `agents/dev-skills/`
-(canonical specs) surfaced as auto-invocable subagents in `.claude/agents/`.
+This repo has an installed copy of the shared Neyra engineering skill stack:
+`agents/dev-skills/`, surfaced as auto-invocable subagents in `.claude/agents/`.
 These are **mandatory workflows, not suggestions.** Full spec: AGENTS.md.
+
+## Shared-kit source boundary
+
+The only canonical authoring source is
+`git@github.com:Strofimov07/Neyra-Kit.git`. Before changing a shared kit path,
+run `python3 agents/neyra-dev-kit/source-policy.py --require-canonical`. Failure
+in a consumer is expected: route the signal to the Neyra Skills Kit Linear
+project and do not hand-edit generated kit files. Project facts under
+`settings/` remain owned by this repo.
 
 ## Rule of relevance (the 1% rule)
 
@@ -47,10 +56,11 @@ green subagent report does not replace the gate's required final checks.
 ## Insight capture — log it the moment you hit it
 
 Any kit friction found mid-work (a missing rule, a skill that misfired or was
-absent, a gate skipped, a repeated correction) gets ONE line appended to
-`agents/neyra-dev-kit/signals.log` (`DATE | signal | route | one-off|pattern`)
-in the same turn — don't wait for a retro; a signal that lives only in the
-conversation evaporates. Routing/dedup happens later via `kit-evolution`.
+absent, a gate skipped, a repeated correction) is persisted in the same turn.
+In canonical Neyra-Kit, append one line to `agents/neyra-dev-kit/signals.log`.
+In a consumer, write it to the Neyra Skills Kit Linear project after dedup (or
+local-only `.neyra/kit-evolution-pending.log` when Linear is unavailable) and
+report the sync debt. Never append to an installed shared-kit copy.
 
 ## Parallel agents — workspace isolation (mandatory)
 

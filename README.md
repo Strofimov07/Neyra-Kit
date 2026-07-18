@@ -14,11 +14,26 @@ The kit is generic by construction: the **scoping rule** — a skill describes
 *how*, your repo's `settings/` describes *what you have* (locales, your API
 contract convention, your tracker workspace, metric sources, production
 facts). Nothing product- or company-specific lives in the skill layers — a
-linter (`lint-scope.py`) enforces this on every kit publication.
+linter (`lint-scope.py`) enforces this on every kit change.
 
-> This repository is a published artifact: its content is synced from the
-> canonical monorepo by `publish.sh` and is not hand-edited here. Found a
-> problem — open an issue; the fix arrives with the next version.
+> This repository is the canonical authoring and release source for the shared
+> Neyra kits. Product repositories are consumers: their installed kit paths are
+> generated and must not be used to author shared changes.
+
+## Authoring and source policy
+
+Shared skills, agents, hooks, installer code, governance, `VERSION`, decisions,
+and evolution signals are changed here through a reviewed PR. Before editing a
+shared path, run:
+
+```bash
+python3 agents/neyra-dev-kit/source-policy.py --require-canonical
+```
+
+The check requires both the root `.neyra-kit-canonical` marker and the canonical
+GitHub origin. Consumer installs receive `.neyra-dev-kit.source` instead. A kit
+problem found in a consumer is routed back to this repository through Kit
+Evolution; installed copies are never promoted into a competing source.
 
 ## What's inside
 

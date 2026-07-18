@@ -18,7 +18,7 @@ Portable engineering skill stack for **every Neyra-adjacent repo** (TradingCoreM
 **MCP layer** — wires the project-scoped **Neyra MCP server** (memory/config/aso/finance/browser tools) into the repo's `.mcp.json` via jq deep-merge (existing servers preserved; secrets stay as `${ENV}` placeholders, never committed). Global MCPs (Linear, Notion, Figma) are user-level and already available everywhere — the kit does **not** ship those. Toggle per repo with `ENABLE_NEYRA_MCP`.
 
 ## Why this design
-- **Single source of truth.** The canonical skills/subagents stay in this monorepo; the installer copies from them, so there are no vendored duplicates to drift. Re-run install to refresh.
+- **Single source of truth.** The canonical skills/subagents live in this standalone Neyra-Kit repository; the installer copies from them, so there are no vendored duplicates to drift. Re-run install to refresh.
 - **Two layers.** Generic discipline is shared as-is; repo-specific conventions live in a small per-repo config, not forked files.
 
 ## Kits
@@ -83,4 +83,4 @@ Run `install.sh --doctor <repo> <config.sh>` to print exactly which components w
 - Re-running is idempotent; the skill sync uses `rsync --delete` (when available) so skills removed upstream are pruned in the target.
 
 ## Updating the kit
-Edit the canonical skills/subagents (in this monorepo) or the templates here, bump [VERSION](VERSION), and re-run `install.sh` for each consumer repo. Tracked under the skill-packaging epics (NEB-263/264/266) and NEB-1232/1235.
+Edit the canonical skills/subagents or templates here, bump [VERSION](VERSION), open a reviewed Neyra-Kit PR, and then re-run `install.sh` for each selected consumer repo. Shared behavior is never authored in a product repository.
