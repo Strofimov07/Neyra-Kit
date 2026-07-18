@@ -22,3 +22,20 @@ canonical repository instead of editing their generated copies.
 remain free to own project facts under `settings/`, but cannot become competing kit
 sources. The pre-v0.27 decision history remains archive-only to avoid copying
 product-specific facts into the shared repository.
+
+## 2026-07-18 — Codex hook path handling becomes multi-file safe (v0.27.1)
+
+**Context.** Codex sends a complete `apply_patch` operation as one hook payload.
+The shared host I/O shim returned only the first file header, so a later managed
+file bypassed `PreToolUse` and later code files skipped `PostToolUse` formatting.
+Move destinations had the same blind spot.
+
+**Decision.** Treat edited paths as a collection at the shared host boundary.
+Enumerate every Add/Update/Delete header and move destination, make guards reject
+the operation when any path is managed, and make formatters visit every existing
+code path. Run the full regression suite from canonical `doctor.sh`; ship a
+self-contained multi-file smoke in the consumer `doctor.sh` copy.
+
+**Consequence.** Multi-file Codex edits now receive the same protection and
+formatting coverage as separate Claude Code edits. Invalid or unparsable hook
+payloads remain fail-open, preserving the existing anti-wedge contract.

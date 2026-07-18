@@ -1,2 +1,4 @@
 # DATE | signal | route | one-off|pattern
 2026-07-18 | a shared Codex hooks fix required an AI Browser product PR because Kit Evolution treated the product monorepo as canonical | route:standalone source policy + consumer-only routing — author shared changes directly in Neyra-Kit | pattern
+2026-07-18 | Codex multi-file apply_patch exposed only its first path, so a later kit-managed file bypassed PreToolUse and later files skipped PostToolUse formatting | route:enumerate every edited path in the shared host I/O shim and pin guard/formatter regressions under NEB-1483 | pattern
+2026-07-18 | EVOLVING-THE-KIT prescribes running scope and mapping checks from agents/neyra-dev-kit, where both resolve no repository targets and report skip instead of validating | route:align documented cwd with checker root resolution and add fail-closed no-target coverage in a separate harness-evolution task | pattern

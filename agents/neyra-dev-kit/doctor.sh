@@ -35,6 +35,9 @@ run "plans lint"           python3 "$KIT/lint-plans.py"
 run "bundled-skill egress" python3 "$KIT/check-egress.py"
 run "scope-lint regression" python3 "$KIT/test-lint-scope.py"
 run "external-leak regression" python3 "$KIT/test-external-leaks.py"
+if [ -f "$KIT/test-codex-hooks.py" ]; then
+  run "Codex hook regression" python3 "$KIT/test-codex-hooks.py"
+fi
 if [ -f "$ROOT/agents/design-skills/impeccable/scripts/live-server.security.test.mjs" ]; then
   if command -v node >/dev/null 2>&1; then
     run "impeccable live security" node --test "$ROOT/agents/design-skills/impeccable/scripts/live-server.security.test.mjs"
@@ -147,14 +150,14 @@ else
   fail=1
 fi
 err="$(mktemp)"
-if python3 -c 'import json; print(json.dumps({"tool_input":{"command":"*** Begin Patch\n*** Update File: AGENTS.neyra-devkit.md\n@@\n-old\n+new\n*** End Patch\n"}}))' |
+if python3 -c 'import json; print(json.dumps({"tool_input":{"command":"*** Begin Patch\n*** Update File: src/allowed.py\n@@\n-old\n+new\n*** Update File: AGENTS.neyra-devkit.md\n@@\n-old\n+new\n*** End Patch\n"}}))' |
    NEYRA_HOOK_HOST=codex "$KIT/hooks/pre-tool-use-guard.sh" >/dev/null 2>"$err"; then
-  echo "FAIL: PreToolUse did not block Codex apply_patch to AGENTS.neyra-devkit.md"
+  echo "FAIL: PreToolUse did not block a later kit-managed file in Codex apply_patch"
   fail=1
 else
   status=$?
   if [ "$status" -eq 2 ] && grep -q "kit-managed" "$err"; then
-    echo "ok: PreToolUse blocks Codex apply_patch to kit-managed files"
+    echo "ok: PreToolUse blocks any kit-managed path in multi-file Codex apply_patch"
   else
     echo "FAIL: PreToolUse returned unexpected status for kit-managed Codex apply_patch ($status)"
     fail=1
