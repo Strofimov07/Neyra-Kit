@@ -7,13 +7,18 @@ read this first.
 
 ## 1. Where the kit lives — source vs. synced copy
 
-- **Editable source (edit here):** this repo — `agents/dev-skills/<id>/SKILL.md`,
+- **Canonical editable source:** `git@github.com:Strofimov07/Neyra-Kit.git` —
+  this repo. Before editing, require both its marker and Git origin:
+  `python3 agents/neyra-dev-kit/source-policy.py --require-canonical`.
+- **Editable paths here:** `agents/dev-skills/<id>/SKILL.md`,
   `.claude/agents/<id>.md` (portable subagents), `agents/neyra-dev-kit/` (tooling,
   manifests, governance, VERSION, hooks).
-- **Synced copy in a consumer repo (do NOT hand-edit):** `<repo>/agents/dev-skills/`
+- **Installed copy in a consumer repo (do NOT hand-edit):** `<repo>/agents/dev-skills/`
   and `<repo>/.claude/agents/` are written by `install.sh`. Its `rsync --delete`
   **overwrites** them — any hand-edit in a consumer repo is lost on the next
-  install. Fix the source here, then re-install.
+  install. Consumer roots carry `.neyra-dev-kit.source`, never the canonical
+  marker. Route the signal and fix to Neyra-Kit, then upgrade the consumer from
+  a reviewed canonical revision.
 
 ## 2. Add or change a skill
 
@@ -39,6 +44,9 @@ read this first.
 
 ## 4. Version + decision record
 
+- Append the signal to `signals.log` before routing it. The ledger exists only
+  in the canonical repo; consumers file/link the signal in the Neyra Skills Kit
+  Linear project instead of editing their generated kit tree.
 - Bump `agents/neyra-dev-kit/VERSION` (semver): **minor** for a new skill or new
   rule (new observable behaviour), **patch** for a bug fix or prose-only change.
 - Update the literal `<!-- kit-version: X.Y.Z -->` footer in `AGENTS.devkit.md`.
@@ -60,7 +68,7 @@ bash doctor.sh                                    # overall status
 ## 6. Re-install into a consumer repo
 
 ```bash
-./install.sh dev <repo-path> "$MONOREPO/settings/configs/<repo>.sh"   # e.g. settings/configs/pravo.sh
+./install.sh dev <repo-path> <repo-path>/settings/configs/<repo>.sh
 # (examples for new consumers: configs/_growth.example.sh / _product.example.sh)
 # --dry-run first; --doctor for a no-write status check. Idempotent; writes .bak.
 ```
@@ -74,28 +82,31 @@ and `check-skill-mapping.py` (consumer-mode relaxes orphan/full-table checks).
 > files can be deleted. Commit/push every lane's WIP first, then install. See the
 > `parallel-lanes` skill.
 
-## 7. Publish to the external kit repo — part of the change, not a follow-up
+## 7. Release from the canonical repository
 
-The monorepo is the canon; [github.com/Strofimov07/Neyra-Kit](https://github.com/Strofimov07/Neyra-Kit)
-is the published artifact consumers outside the monorepo install from. **Every
-VERSION bump ends with a publish** — a kit change is not done until internal and
-external carry the same version:
+[github.com/Strofimov07/Neyra-Kit](https://github.com/Strofimov07/Neyra-Kit)
+is both the authoring source and the install source. A kit change is ready only
+after its branch passes the canonical checks and a reviewable PR is open here:
 
 ```bash
-./publish.sh <path-to-neyra-kit-clone>   # --dry-run first
-# gate: lint-scope.py runs inside — a project fact in a generic layer blocks it
-git -C <path-to-neyra-kit-clone> push
+python3 agents/neyra-dev-kit/source-policy.py --require-canonical
+bash agents/neyra-dev-kit/doctor.sh
+git push -u origin <branch>
+# open a PR against Neyra-Kit/main; merge remains a human decision
 ```
 
-If you cannot publish in the same sitting (no clone at hand), file it — don't
-let the repos drift silently. `kit-evolution` step 4 carries the same rule.
+`publish.sh` is a fail-closed compatibility tombstone. Do not recreate a
+product-repo → Neyra-Kit sync path. Consumer rollout is a separate install or
+upgrade task after the canonical revision is reviewed.
 
 ## 8. Anti-drift invariants
 
 - One source of truth per fact; consumer copies are generated, never authored.
+- Canonical marker + canonical Git origin are both required for shared authoring.
 - Generic layers (`dev-skills/`, `product-skills/`) carry zero project facts —
   facts live in `settings/` (`lint-scope.py` enforces; see `settings/README.md`).
-- Internal VERSION == external VERSION after every kit change (`publish.sh`).
+- Consumers record the exact source in `.neyra-dev-kit.source`; the canonical
+  repo carries `.neyra-kit-canonical` and never a consumer stamp.
 - The skill↔subagent table is hand-written but CI-checked (`check-skill-mapping.py`).
 - One change = one branch = one PR (`pr-hygiene`); for simultaneous agents,
   isolate lanes (`parallel-lanes`).

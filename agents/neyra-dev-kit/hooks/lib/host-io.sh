@@ -41,16 +41,21 @@ except Exception:
     print("")' "$1" 2>/dev/null
 }
 
-# Resolve the path of the file an Edit/Write tool is acting on, per host.
-nk_edit_path() {
+# Resolve every path an Edit/Write tool is acting on, one per line. Claude Code
+# and Cursor expose a single file_path; Codex apply_patch can carry many files in
+# one command, so returning only its first header would let later files bypass
+# guards and formatting.
+nk_edit_paths() {
   local p
   case "$NK_HOST" in
     cursor)
-      p="$(nk_json file_path)"; [ -n "$p" ] && { printf '%s' "$p"; return; }
+      p="$(nk_json file_path)"; [ -n "$p" ] && { printf '%s\n' "$p"; return; }
       nk_json tool_input.file_path ;;
     codex)
-      p="$(nk_json tool_input.file_path)"; [ -n "$p" ] && { printf '%s' "$p"; return; }
-      # apply_patch: the path appears in the patch command text.
+      p="$(nk_json tool_input.file_path)"; [ -n "$p" ] && { printf '%s\n' "$p"; return; }
+      # apply_patch: paths appear in the patch command text. Include move
+      # destinations as edits too; a protected destination must not bypass the
+      # guard merely because its source path is allowed.
       printf '%s' "$NK_PAYLOAD" | python3 -c '
 import json, re, sys
 try:
@@ -58,12 +63,41 @@ try:
 except Exception:
     cmd = ""
 cmd = cmd if isinstance(cmd, str) else ""
-m = re.search(r"\*\*\* (?:Add|Update|Delete) File: (.+)", cmd) or re.search(r"(?:\+\+\+|---) (.+)", cmd)
-print(m.group(1).strip() if m else "")' 2>/dev/null ;;
+paths = []
+
+def add(path):
+    path = path.strip()
+    if path and path != "/dev/null" and path not in paths:
+        paths.append(path)
+
+for line in cmd.splitlines():
+    match = re.match(r"\*\*\* (?:Add|Update|Delete) File: (.+)$", line)
+    if match:
+        add(match.group(1))
+        continue
+    match = re.match(r"\*\*\* Move to: (.+)$", line)
+    if match:
+        add(match.group(1))
+
+if not paths:
+    for line in cmd.splitlines():
+        match = re.match(r"(?:\+\+\+|---)\s+(.+)$", line)
+        if not match:
+            continue
+        path = match.group(1).split("\t", 1)[0].strip()
+        if path.startswith(("a/", "b/")):
+            path = path[2:]
+        add(path)
+
+print("\n".join(paths))' 2>/dev/null ;;
     *)
       nk_json tool_input.file_path ;;
   esac
 }
+
+# Backward-compatible first-path helper for any external hook that still calls
+# the old scalar API. Multi-file-aware hooks should use nk_edit_paths directly.
+nk_edit_path() { nk_edit_paths | sed -n '1p'; }
 
 # Block an attempted edit (PreToolUse guard). $1 = human reason. Exits.
 nk_block_edit() {

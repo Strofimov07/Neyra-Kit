@@ -15,6 +15,18 @@ fail=0
 run() { local label="$1"; shift; echo "── $label"; if ! "$@"; then fail=1; fi; }
 
 echo "neyra-dev-kit doctor v$(cat "$KIT/VERSION") — $ROOT"
+echo "── source policy"
+if [ -f "$ROOT/.neyra-kit-canonical" ]; then
+  run "canonical authoring identity" python3 "$KIT/source-policy.py" --root "$ROOT" --require-canonical
+elif [ -f "$ROOT/.neyra-dev-kit.source" ]; then
+  run "consumer source identity" python3 "$KIT/source-policy.py" --root "$ROOT"
+else
+  echo "WARN: no canonical marker or consumer source stamp — re-install from Neyra-Kit"
+fi
+if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; then
+  run "source-policy regression" python3 "$KIT/test-source-policy.py"
+  run "canonical leak scan" python3 "$KIT/check-external-leaks.py" "$ROOT"
+fi
 run "skills lint"          python3 "$KIT/lint-skills.py"
 run "skill-mapping regression" python3 "$KIT/test-check-skill-mapping.py"
 run "portable-reviewer regression" python3 "$KIT/test-portable-reviewers.py"
@@ -23,6 +35,9 @@ run "plans lint"           python3 "$KIT/lint-plans.py"
 run "bundled-skill egress" python3 "$KIT/check-egress.py"
 run "scope-lint regression" python3 "$KIT/test-lint-scope.py"
 run "external-leak regression" python3 "$KIT/test-external-leaks.py"
+if [ -f "$KIT/test-codex-hooks.py" ]; then
+  run "Codex hook regression" python3 "$KIT/test-codex-hooks.py"
+fi
 if [ -f "$ROOT/agents/design-skills/impeccable/scripts/live-server.security.test.mjs" ]; then
   if command -v node >/dev/null 2>&1; then
     run "impeccable live security" node --test "$ROOT/agents/design-skills/impeccable/scripts/live-server.security.test.mjs"
@@ -63,8 +78,14 @@ else
 fi
 
 echo "── decisionLog"
-if [ -f "$KIT/decisionLog.md" ]; then echo "ok: decisionLog.md present"
-else echo "note: no decisionLog.md yet (optional per-repo ADR — create on first durable decision)"; fi
+if [ -f "$KIT/decisionLog.md" ]; then
+  echo "ok: decisionLog.md present"
+elif [ -f "$ROOT/.neyra-kit-canonical" ]; then
+  echo "FAIL: canonical Neyra-Kit requires decisionLog.md"
+  fail=1
+else
+  echo "note: decisionLog.md is canonical-source history and is not copied to consumers"
+fi
 
 # NEB-1375: the governance fragment's version footer must match VERSION —
 # a stale footer means the fragment (or the stamp) didn't ship with the bump.
@@ -100,9 +121,19 @@ if [ -d "$ROOT/settings/skills" ]; then
     else echo "WARN: project skill '$sid' in settings/skills/ but not surfaced — re-run install.sh"; fi
   done
 fi
-for hc in ".cursor/hooks.json:Cursor" ".codex/hooks.json:Codex"; do
-  f="${hc%%:*}"; n="${hc#*:}"; [ -f "$ROOT/$f" ] && echo "ok: $n hooks config present ($f)"
-done
+[ -f "$ROOT/.cursor/hooks.json" ] && echo "ok: Cursor hooks config present (.cursor/hooks.json)"
+
+codex_template="$KIT/templates/codex/hooks.json"
+codex_installed="$ROOT/.codex/hooks.json"
+if [ -f "$codex_template" ]; then
+  run "Codex hook template" python3 "$KIT/validate-codex-hooks.py" "$codex_template"
+fi
+if [ -f "$codex_installed" ]; then
+  run "Codex installed hooks" python3 "$KIT/validate-codex-hooks.py" "$codex_installed"
+  echo "note: Codex only runs project hooks after their current definitions are reviewed and trusted in /hooks"
+else
+  echo "WARN: no Codex hooks config at .codex/hooks.json — re-run install.sh"
+fi
 
 echo "── codex hook smoke"
 if out="$(NEYRA_HOOK_HOST=codex "$KIT/hooks/session-start.sh" </dev/null)" &&
@@ -119,14 +150,14 @@ else
   fail=1
 fi
 err="$(mktemp)"
-if python3 -c 'import json; print(json.dumps({"tool_input":{"command":"*** Begin Patch\n*** Update File: AGENTS.neyra-devkit.md\n@@\n-old\n+new\n*** End Patch\n"}}))' |
+if python3 -c 'import json; print(json.dumps({"tool_input":{"command":"*** Begin Patch\n*** Update File: src/allowed.py\n@@\n-old\n+new\n*** Update File: AGENTS.neyra-devkit.md\n@@\n-old\n+new\n*** End Patch\n"}}))' |
    NEYRA_HOOK_HOST=codex "$KIT/hooks/pre-tool-use-guard.sh" >/dev/null 2>"$err"; then
-  echo "FAIL: PreToolUse did not block Codex apply_patch to AGENTS.neyra-devkit.md"
+  echo "FAIL: PreToolUse did not block a later kit-managed file in Codex apply_patch"
   fail=1
 else
   status=$?
   if [ "$status" -eq 2 ] && grep -q "kit-managed" "$err"; then
-    echo "ok: PreToolUse blocks Codex apply_patch to kit-managed files"
+    echo "ok: PreToolUse blocks any kit-managed path in multi-file Codex apply_patch"
   else
     echo "FAIL: PreToolUse returned unexpected status for kit-managed Codex apply_patch ($status)"
     fail=1

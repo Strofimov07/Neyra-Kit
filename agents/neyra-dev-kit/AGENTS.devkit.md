@@ -5,9 +5,10 @@
 # Neyra dev-kit — execution governance ({{REPO_NAME}})
 
 This repo uses the shared Neyra engineering skill stack. Skills live under
-`agents/dev-skills/` (canonical specs) and are surfaced as auto-invocable
-subagents under `.claude/agents/`. The skill is the spec; the subagent is the
-auto-trigger surface — invoke whichever the runtime supports.
+`agents/dev-skills/` (installed specs) and are surfaced as auto-invocable
+subagents under `.claude/agents/`. Canonical authoring lives only in
+`Strofimov07/Neyra-Kit`; consumer copies are generated. The skill is the spec;
+the subagent is the auto-trigger surface — invoke whichever the runtime supports.
 
 ## Default skill stack (most coding tasks)
 `implementation-loop` → `simplify-diff`/`code-reviewer` → `verify-runtime`,
@@ -23,11 +24,15 @@ start with `test-first` — a failing test (RED) before the change.
 | simplify-diff | code-reviewer | post-implementation, before closure |
 | verify-runtime | verify-runtime | real-surface verification before done |
 | contract-safety | contract-checker | new/modified typed HTTP endpoint |
+| contract-doc-sync | contract-doc-sync | backend/contract/schedule/integration documentation change |
 | localization-guard | localization-checker | user-facing string change |
 | regression-scout | regression-scout | shared UI / lifecycle / nav / auth change |
 | release-readiness | release-readiness | before declaring runtime work done |
 | analytics-instrumentation | analytics-instrumentation | feature behavior / funnel change |
 | trust-boundary-review | trust-boundary-review | AI action / sensitive data / destructive flow |
+| security-review | security-reviewer | auth / crypto / secrets / untrusted input / raw SQL / HTML / WebView / deep links |
+| design-system-conformance | design-system-conformance | UI implementation/review — reuse components/tokens/states |
+| skill-capture | skill-capture | institutionalize a repeated workflow into a skill |
 | kit-evolution | kit-evolution | end of task / recurring correction — evolve the kit |
 | post-merge-watch | post-merge-watch | after a merge lands — watch the triggered CI/CD, surface red in the same turn |
 | pr-review-watch | pr-review-watch | after a PR opens/pushes — watch its automated reviewers (Bugbot/CI), surface findings by severity |
@@ -39,6 +44,9 @@ start with `test-first` — a failing test (RED) before the change.
 | parallel-lanes | parallel-lanes | simultaneous agents in one repo — worktree/branch isolation |
 | receiving-code-review | receiving-code-review | responding to review findings — verify, no sycophancy |
 | knowledge-graph | knowledge-graph | curating canonical docs/wiki, doc drifts from code, siloed/duplicated knowledge |
+| pr-hygiene | pr-hygiene | committing, branching, pushing, or opening a PR |
+| incident-runbook | incident-runbook | production incident / on-call triage |
+| batch-migration | (manual — approval-gated) | explicit large mechanical migration delegation only |
 | goal-mode | (manual — opt-in) | autonomous goal orchestration — checkpointed, capped, Linear-anchored |
 | backlog-fleet | (manual — opt-in) | existing backlog → approved parallel batches → lanes, mid-flight independence re-check |
 
@@ -60,4 +68,4 @@ start with `test-first` — a failing test (RED) before the change.
 - Typed-contract convention: {{CONTRACT_STACK}}
 - Linear workspace: {{LINEAR_WORKSPACE}} (every issue MUST have a project — see `linear-router`).
 
-<!-- kit-version: 0.26.1 -->
+<!-- kit-version: 0.27.1 -->

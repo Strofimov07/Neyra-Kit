@@ -1,5 +1,5 @@
 # neyra-dev-kit — what the installer ships into a target repo.
-# Canonical source lives in THIS monorepo; the installer copies Layer A as-is
+# Canonical source lives in this standalone repository; the installer copies Layer A as-is
 # and renders Layer B from per-repo config. Single source of truth, no vendored
 # duplicates → no drift.
 
@@ -50,6 +50,6 @@ mcp:
   merges_into: .mcp.json            # jq deep-merge; existing servers preserved
   enable_key: enable_neyra_mcp
   servers:
-    - id: neyra                     # local node bridge: memory/config/aso/finance/browser tools
-      entry: plugins/neyra-cursor-plugin/mcp-server/index.mjs   # canonical, from this monorepo
+    - id: neyra                     # optional local node bridge supplied by consumer config
+      entry: config:NEYRA_MCP_ENTRY # product runtime path is never owned by the shared kit
       secrets: env-placeholders     # ${NEYRA_API_URL} etc. — never committed

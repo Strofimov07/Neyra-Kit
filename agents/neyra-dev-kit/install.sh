@@ -7,15 +7,20 @@
 #     (2-positional back-compat form: kit defaults to "dev")
 #
 # Sources manifests/<kit>.sh for the kit definition, then copies Layer A
-# (portable skills + generic subagents) verbatim from the canonical monorepo,
+# (portable skills + generic subagents) verbatim from the canonical Neyra-Kit repo,
 # renders Layer B (templated subagents + AGENTS fragment) from <config.sh>,
 # and writes a version stamp. Idempotent: overwrites only kit-managed files.
 set -euo pipefail
 
 KIT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MONOREPO="$(cd "$KIT_DIR/../.." && pwd)"
-CANON_AGENTS="$MONOREPO/.claude/agents"
+SOURCE_ROOT="$(cd "$KIT_DIR/../.." && pwd)"
+CANON_AGENTS="$SOURCE_ROOT/.claude/agents"
 VERSION="$(cat "$KIT_DIR/VERSION")"
+CANONICAL_REMOTE="git@github.com:Strofimov07/Neyra-Kit.git"
+SOURCE_REVISION="$(git -C "$SOURCE_ROOT" rev-parse HEAD 2>/dev/null || printf 'unknown')"
+
+python3 "$KIT_DIR/source-policy.py" --root "$SOURCE_ROOT" --require-canonical >/dev/null \
+  || { echo "error: install.sh must run from the canonical Neyra-Kit clone" >&2; exit 2; }
 
 DRY=0; ALLOW_NON_GIT=0; DOCTOR=0
 while [[ "${1:-}" == --* ]]; do
@@ -52,7 +57,7 @@ fi
 
 # Defaults; overridden by config.
 ENABLE_LINEAR_ROUTER=1; ENABLE_LOCALIZATION_CHECKER=1; ENABLE_CONTRACT_CHECKER=1
-ENABLE_NEYRA_MCP=1; ENABLE_CURSOR_SKILLS=1; ENABLE_HOOKS=1
+ENABLE_NEYRA_MCP=0; ENABLE_CURSOR_SKILLS=1; ENABLE_HOOKS=1
 REPO_NAME=""; STACK=""; BUILD_VERIFY_CMD=""; LOCALES=""; I18N_MECHANISM=""
 CONTRACT_STACK=""; LINEAR_WORKSPACE=""; LINEAR_ROUTING=""
 # Linear MCP server-instance prefix the linear-router's tools resolve against. This is
@@ -64,8 +69,9 @@ LINEAR_MCP_PREFIX=""
 # inert (those tools inactive), everything else works.
 NOTION_MCP_PREFIX=""
 FIGMA_MCP_PREFIX=""
-# Canonical Neyra MCP server entrypoint (project-scoped; global MCPs like Linear/Notion are user-level).
-NEYRA_MCP_ENTRY="$MONOREPO/plugins/neyra-cursor-plugin/mcp-server/index.mjs"
+# Optional project-scoped Neyra MCP entrypoint. Consumer config must provide it;
+# the standalone canonical kit has no product runtime dependency.
+NEYRA_MCP_ENTRY=""
 # NOTE: the config is executed as shell (sourced) — only run with configs you have reviewed.
 # shellcheck disable=SC1090
 source "$CONFIG"
@@ -115,8 +121,8 @@ echo "neyra-dev-kit v$VERSION [kit=$KIT_NAME] → $TARGET  (repo: ${REPO_NAME:-?
 [[ $DRY -eq 1 ]] && echo "(dry-run: no files written)"
 
 # Resolve the canonical skills source for this kit.
-CANON_SKILLS="$MONOREPO/$SKILLS_SRC"
-[[ -d "$CANON_SKILLS" ]] || { echo "error: SKILLS_SRC '$SKILLS_SRC' not found in monorepo at $CANON_SKILLS" >&2; exit 1; }
+CANON_SKILLS="$SOURCE_ROOT/$SKILLS_SRC"
+[[ -d "$CANON_SKILLS" ]] || { echo "error: SKILLS_SRC '$SKILLS_SRC' not found in canonical source at $CANON_SKILLS" >&2; exit 1; }
 
 echo "Layer A — portable skills ($SKILLS_SRC):"
 do_ "mkdir -p '$TARGET/$SKILLS_SRC'"
@@ -152,9 +158,9 @@ fi
 # Manifest opt-in (BUNDLED_SKILLS_SRC, set only by kits that ship them). The canonical dir is also
 # copied into the target's portable layer so the consumer's session-start hook can re-sync it.
 # Synced BEFORE project skills below so a same-named settings/skills/ entry overrides it (project > bundled).
-if [[ -n "${BUNDLED_SKILLS_SRC:-}" && -d "$MONOREPO/$BUNDLED_SKILLS_SRC" ]]; then
+if [[ -n "${BUNDLED_SKILLS_SRC:-}" && -d "$SOURCE_ROOT/$BUNDLED_SKILLS_SRC" ]]; then
   echo "Bundled skills — $BUNDLED_SKILLS_SRC → .claude/skills/:"
-  CANON_BUNDLED="$MONOREPO/$BUNDLED_SKILLS_SRC"
+  CANON_BUNDLED="$SOURCE_ROOT/$BUNDLED_SKILLS_SRC"
   do_ "mkdir -p '$TARGET/$BUNDLED_SKILLS_SRC' '$TARGET/.claude/skills'"
   if command -v rsync >/dev/null 2>&1; then
     do_ "rsync -a --delete '$CANON_BUNDLED/' '$TARGET/$BUNDLED_SKILLS_SRC/'"
@@ -219,7 +225,7 @@ for a in "${PORTABLE_AGENTS[@]}"; do
     do_ "cp '$CANON_AGENTS/$a.md' '$TARGET/.claude/agents/$a.md'"
     # Published copies carry {{LINEAR_MCP_PREFIX}}/{{NOTION_MCP_PREFIX}}
     # placeholders (MCP ids are per-user) — substitute the consumer's own ids.
-    # No-op on monorepo canon (real ids, no placeholders) and in dry-run.
+    # No-op in the canonical clone (real ids, no placeholders) and in dry-run.
     if [[ $DRY -eq 0 ]]; then
       [[ -n "$LINEAR_MCP_PREFIX" ]] && perl -pi -e "s/\Q{{LINEAR_MCP_PREFIX}}\E/$LINEAR_MCP_PREFIX/g" "$TARGET/.claude/agents/$a.md"
       [[ -n "${NOTION_MCP_PREFIX:-}" ]] && perl -pi -e "s/\Q{{NOTION_MCP_PREFIX}}\E/$NOTION_MCP_PREFIX/g" "$TARGET/.claude/agents/$a.md"
@@ -377,7 +383,7 @@ if [[ "${ENABLE_HOOKS}" == "1" ]]; then
     mkdir -p "$tool_dst/hooks/lib"
     if cp "$KIT_DIR"/hooks/*.sh "$tool_dst/hooks/" 2>/dev/null; then chmod +x "$tool_dst"/hooks/*.sh; fi
     cp "$KIT_DIR"/hooks/lib/*.sh "$tool_dst/hooks/lib/" 2>/dev/null || true   # the host I/O shim the hooks source
-    for f in KIT_BOOTSTRAP.md doctor.sh lint-skills.py check-skill-mapping.py test-check-skill-mapping.py test-portable-reviewers.py check-egress.py lint-scope.py test-lint-scope.py check-external-leaks.py test-external-leaks.py lint-plans.py VERSION; do
+    for f in KIT_BOOTSTRAP.md doctor.sh source-policy.py lint-skills.py check-skill-mapping.py test-check-skill-mapping.py test-portable-reviewers.py check-egress.py lint-scope.py test-lint-scope.py check-external-leaks.py test-external-leaks.py lint-plans.py validate-codex-hooks.py VERSION; do
       [[ -f "$KIT_DIR/$f" ]] && cp "$KIT_DIR/$f" "$tool_dst/$f"
     done
     if [[ -d "$KIT_DIR/orchestration" ]]; then mkdir -p "$tool_dst/orchestration"; cp "$KIT_DIR"/orchestration/* "$tool_dst/orchestration/" 2>/dev/null || true; fi   # goal-mode driver + README
@@ -415,16 +421,16 @@ if [[ "${ENABLE_HOOKS}" == "1" ]]; then
     fi
   fi
 
-  # Codex surface — hooks.json (SessionStart/PreToolUse/PostToolUse/Stop). The I/O
-  # contract is confirmed against the docs; the registration-file schema is
-  # best-effort — confirm against a live Codex CLI (/hooks) before relying on it.
+  # Codex surface — current hooks.json schema (event → matcher group → command).
+  # Project hooks are skipped until the user trusts their exact definitions.
   if [[ "${ENABLE_CODEX:-1}" == "1" ]]; then
     if [[ $DRY -eq 1 ]]; then
       say "[dry] write .codex/hooks.json"
     else
       mkdir -p "$TARGET/.codex"
       cp "$KIT_DIR/templates/codex/hooks.json" "$TARGET/.codex/hooks.json"
-      say "wrote .codex/hooks.json (confirm schema via Codex /hooks)"
+      say "wrote .codex/hooks.json"
+      say "Codex: open /hooks, then review and trust the project hooks before relying on them"
     fi
   fi
 fi
@@ -465,5 +471,20 @@ if [[ -f "$KIT_DIR/routines/doc-freshness.SKILL.md" ]]; then
 fi
 
 do_ "printf '%s\n' '$VERSION' > '$TARGET/.neyra-dev-kit.version'"
+if [[ -f "$TARGET/.neyra-kit-canonical" ]]; then
+  python3 "$KIT_DIR/source-policy.py" --root "$TARGET" --require-canonical >/dev/null \
+    || { echo "error: target carries an invalid canonical marker" >&2; exit 2; }
+  [[ $DRY -eq 1 ]] || rm -f "$TARGET/.neyra-dev-kit.source"
+  say "canonical source marker retained; consumer source stamp not written"
+elif [[ $DRY -eq 1 ]]; then
+  say "[dry] write .neyra-dev-kit.source → $CANONICAL_REMOTE@$SOURCE_REVISION"
+else
+  {
+    printf 'repository=%s\n' "$CANONICAL_REMOTE"
+    printf 'revision=%s\n' "$SOURCE_REVISION"
+    printf 'version=%s\n' "$VERSION"
+  } > "$TARGET/.neyra-dev-kit.source"
+  say "stamped canonical source in .neyra-dev-kit.source"
+fi
 echo "Done. Next: add a line to $TARGET/AGENTS.md (or CLAUDE.md):"
 echo "      See [AGENTS.neyra-devkit.md](AGENTS.neyra-devkit.md) for the shared skill stack."

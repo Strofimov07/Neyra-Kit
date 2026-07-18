@@ -6,9 +6,9 @@ Deterministic sources only (no model self-reporting):
                              results, guard blocks (local, gitignored)
   agents/neyra-dev-kit/signals.log   captured kit-evolution insights
   git log                    VERSION bumps (evolution velocity)
-  <external-clone>/agents/neyra-dev-kit/VERSION   publish lag (optional arg)
+  .neyra-kit-canonical / .neyra-dev-kit.source   source ownership mode
 
-Usage: kit-metrics.py [repo-root] [--external <neyra-kit-clone>] [--days N]
+Usage: kit-metrics.py [repo-root] [--days N]
 """
 
 import json
@@ -21,16 +21,14 @@ from pathlib import Path
 
 
 def parse_args(argv):
-    root, ext, days = ".", None, 30
+    root, days = ".", 30
     it = iter(argv)
     for a in it:
-        if a == "--external":
-            ext = next(it, None)
-        elif a == "--days":
+        if a == "--days":
             days = int(next(it, "30"))
         else:
             root = a
-    return Path(root).resolve(), ext, days
+    return Path(root).resolve(), days
 
 
 def load_events(root, since):
@@ -98,7 +96,7 @@ def version_bumps(root, days):
 
 
 def main(argv):
-    root, ext, days = parse_args(argv)
+    root, days = parse_args(argv)
     since = datetime.now(timezone.utc) - timedelta(days=days)
     print(f"kit-metrics — {root.name}, last {days}d")
 
@@ -151,18 +149,14 @@ def main(argv):
         print(f"  {b}")
 
     ver_file = root / "agents" / "neyra-dev-kit" / "VERSION"
-    internal = ver_file.read_text().strip() if ver_file.is_file() else "?"
-    if ext:
-        ext_ver_file = Path(ext) / "agents" / "neyra-dev-kit" / "VERSION"
-        external = (
-            ext_ver_file.read_text().strip() if ext_ver_file.is_file() else "missing"
-        )
-        drift = "OK — in sync" if internal == external else "DRIFT — run publish.sh"
-        print(f"\n── publish: internal v{internal} vs external v{external} → {drift}")
+    version = ver_file.read_text().strip() if ver_file.is_file() else "?"
+    if (root / ".neyra-kit-canonical").is_file():
+        source_mode = "canonical authoring source"
+    elif (root / ".neyra-dev-kit.source").is_file():
+        source_mode = "consumer install"
     else:
-        print(
-            f"\n── publish: internal v{internal} (pass --external <clone> to check drift)"
-        )
+        source_mode = "unstamped checkout"
+    print(f"\n── source: {source_mode}, kit v{version}")
     return 0
 
 
