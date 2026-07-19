@@ -50,7 +50,7 @@ class FirebaseMCPInstallerTests(unittest.TestCase):
                     "ENABLE_NEYRA_MCP=0",
                     f"ENABLE_FIREBASE_MCP={int(enabled)}",
                     'FIREBASE_PROJECT_DIR="settings/firebase"',
-                    'FIREBASE_MCP_TOOLS="remoteconfig_get_template,remoteconfig_update_template,crashlytics_get_report"',
+                    'FIREBASE_MCP_TOOLS="firebase_read_resources,remoteconfig_get_template,remoteconfig_update_template,crashlytics_get_report"',
                     "ENABLE_CURSOR_SKILLS=0",
                     "ENABLE_HOOKS=0",
                     "ENABLE_CODEX=0",
@@ -100,7 +100,7 @@ class FirebaseMCPInstallerTests(unittest.TestCase):
                     "--dir",
                     str(root / "settings" / "firebase"),
                     "--tools",
-                    "remoteconfig_get_template,remoteconfig_update_template,crashlytics_get_report",
+                    "firebase_read_resources,remoteconfig_get_template,remoteconfig_update_template,crashlytics_get_report",
                 ],
                 firebase["args"],
             )

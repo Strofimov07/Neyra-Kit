@@ -79,8 +79,9 @@ Run `install.sh --doctor <repo> <config.sh>` to print exactly which components w
 For Firebase growth operations, set `ENABLE_FIREBASE_MCP=1`, point
 `FIREBASE_PROJECT_DIR` at a consumer-owned directory containing `firebase.json`,
 and select the smallest exact tool allowlist in `FIREBASE_MCP_TOOLS`. The example
-permits Remote Config reads/writes plus read-only Crashlytics analysis, without
-exposing generic project creation or deployment tools. Authenticate
+permits the Firebase documentation resource required by Crashlytics reports,
+Remote Config reads/writes, and read-only Crashlytics analysis, without exposing
+generic project creation or deployment tools. Authenticate
 with `firebase login` for an interactive workstation or Application Default
 Credentials for headless use. Grant `roles/cloudconfig.viewer` for inspection
 and `roles/cloudconfig.admin` only to identities that publish live templates.

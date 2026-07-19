@@ -73,7 +73,7 @@ FIGMA_MCP_PREFIX=""
 # the standalone canonical kit has no product runtime dependency.
 NEYRA_MCP_ENTRY=""
 FIREBASE_PROJECT_DIR=""
-FIREBASE_MCP_TOOLS="remoteconfig_get_template,remoteconfig_update_template,crashlytics_get_issue,crashlytics_list_events,crashlytics_batch_get_events,crashlytics_list_notes,crashlytics_get_report"
+FIREBASE_MCP_TOOLS="firebase_read_resources,remoteconfig_get_template,remoteconfig_update_template,crashlytics_get_issue,crashlytics_list_events,crashlytics_batch_get_events,crashlytics_list_notes,crashlytics_get_report"
 # NOTE: the config is executed as shell (sourced) — only run with configs you have reviewed.
 # shellcheck disable=SC1090
 source "$CONFIG"

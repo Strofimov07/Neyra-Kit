@@ -34,6 +34,9 @@ Derived from the canonical Notion role model. This is a runtime profile, not the
 - Treat Firebase MCP as the Remote Config and Crashlytics control
   plane. Treat GA4, BigQuery, or a product-owned event mirror as the measurement
   plane; Firebase MCP alone does not prove experiment impact.
+- Before calling `crashlytics_get_report`, read the Firebase
+  `crashlytics_reports_guide` through `firebase_read_resources`; the guide owns
+  the report prerequisites and interpretation rules.
 
 **Success criteria**
 - The experiment can be evaluated from an identified data source, not inferred

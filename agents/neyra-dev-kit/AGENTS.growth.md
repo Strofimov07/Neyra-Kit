@@ -45,6 +45,8 @@ observable signal. Use standard analytics event names (Firebase/GA4 standard:
   confirmation.
 - After publish, verify the active template and a real client fetch separately
   from measurement delivery to GA4, BigQuery, or the product-owned event mirror.
+- Before requesting a Crashlytics report, read the bundled
+  `crashlytics_reports_guide` through `firebase_read_resources`.
 - Credentials remain in Firebase CLI or Application Default Credentials. Never
   put refresh tokens, access tokens, or service-account keys in repo settings.
 

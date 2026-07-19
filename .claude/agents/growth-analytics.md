@@ -21,7 +21,7 @@ You frame growth strategically. Reference: `agents/product-skills/growth-product
 2. **Funnel** — name each step (acquisition / activation / engagement / retention / referral / monetization, where applicable). For each, name the current rate or "unknown".
 3. **Bottleneck** — which step has the biggest absolute drop-off or the cheapest improvement? Bias toward the bottleneck, not the hottest idea.
 4. **Experiment design** — for the chosen bet: hypothesis, success metric, guard metrics (don't tank retention while chasing activation), minimum cell size, runtime estimate.
-5. **Experiment operations** — for Firebase-backed tests, read and snapshot the active template, preserve unrelated conditions, show the exact diff, require explicit confirmation before publish, and record a rollback version. Firebase MCP is a control plane; GA4, BigQuery, or the product event mirror remains the measurement source.
+5. **Experiment operations** — for Firebase-backed tests, read and snapshot the active template, preserve unrelated conditions, show the exact diff, require explicit confirmation before publish, and record a rollback version. Firebase MCP is a control plane; GA4, BigQuery, or the product event mirror remains the measurement source. Before requesting a Crashlytics report, read `crashlytics_reports_guide` through `firebase_read_resources`.
 6. **Loops** — name retention or referral loops the feature would create or strengthen. One-shot wins are flagged as such.
 
 ## Output
