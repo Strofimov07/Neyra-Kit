@@ -73,7 +73,9 @@ FIGMA_MCP_PREFIX=""
 # the standalone canonical kit has no product runtime dependency.
 NEYRA_MCP_ENTRY=""
 FIREBASE_PROJECT_DIR=""
+FIREBASE_MCP_ACCESS="limited"
 FIREBASE_MCP_TOOLS="firebase_read_resources,remoteconfig_get_template,remoteconfig_update_template,crashlytics_get_issue,crashlytics_list_events,crashlytics_batch_get_events,crashlytics_list_notes,crashlytics_get_report"
+FIREBASE_MCP_FEATURES="apphosting,auth,core,crashlytics,realtimedatabase,dataconnect,firestore,functions,messaging,remoteconfig,storage,developerknowledge"
 # NOTE: the config is executed as shell (sourced) — only run with configs you have reviewed.
 # shellcheck disable=SC1090
 source "$CONFIG"
@@ -86,6 +88,16 @@ if [[ -n "$FIREBASE_PROJECT_DIR" ]]; then
   esac
 fi
 
+FIREBASE_MCP_SCOPE_FLAG="--tools"
+FIREBASE_MCP_SCOPE="$FIREBASE_MCP_TOOLS"
+if [[ "$FIREBASE_MCP_ACCESS" == "full" ]]; then
+  FIREBASE_MCP_SCOPE_FLAG="--only"
+  FIREBASE_MCP_SCOPE="$FIREBASE_MCP_FEATURES"
+elif [[ "$FIREBASE_MCP_ACCESS" != "limited" && "$ENABLE_FIREBASE_MCP" == "1" ]]; then
+  echo "error: FIREBASE_MCP_ACCESS must be 'limited' or 'full'" >&2
+  exit 1
+fi
+
 say()  { printf '  %s\n' "$*"; }
 do_()  { if [[ $DRY -eq 1 ]]; then say "[dry] $*"; else eval "$*"; fi; }
 
@@ -95,9 +107,9 @@ render() { # render <template-file> -> stdout. Values passed via env (no code in
   LOCALES="$LOCALES" I18N_MECHANISM="$I18N_MECHANISM" CONTRACT_STACK="$CONTRACT_STACK" \
   LINEAR_WORKSPACE="$LINEAR_WORKSPACE" LINEAR_ROUTING="$LINEAR_ROUTING" NEYRA_MCP_ENTRY="$NEYRA_MCP_ENTRY" \
   LINEAR_MCP_PREFIX="$LINEAR_MCP_PREFIX" FIREBASE_MCP_DIR="$FIREBASE_MCP_DIR" \
-  FIREBASE_MCP_TOOLS="$FIREBASE_MCP_TOOLS" \
+  FIREBASE_MCP_SCOPE_FLAG="$FIREBASE_MCP_SCOPE_FLAG" FIREBASE_MCP_SCOPE="$FIREBASE_MCP_SCOPE" \
   perl -0777 -pe '
-    for my $k (qw(REPO_NAME STACK BUILD_VERIFY_CMD LOCALES I18N_MECHANISM CONTRACT_STACK LINEAR_WORKSPACE LINEAR_ROUTING NEYRA_MCP_ENTRY LINEAR_MCP_PREFIX FIREBASE_MCP_DIR FIREBASE_MCP_TOOLS)) {
+    for my $k (qw(REPO_NAME STACK BUILD_VERIFY_CMD LOCALES I18N_MECHANISM CONTRACT_STACK LINEAR_WORKSPACE LINEAR_ROUTING NEYRA_MCP_ENTRY LINEAR_MCP_PREFIX FIREBASE_MCP_DIR FIREBASE_MCP_SCOPE_FLAG FIREBASE_MCP_SCOPE)) {
       my $v = $ENV{$k} // ""; s/\{\{\Q$k\E\}\}/$v/g;
     }
   ' "$1"
@@ -125,9 +137,16 @@ if [[ $DOCTOR -eq 1 ]]; then
     elif [[ "$srv" == "firebase" ]]; then
       if [[ "$ENABLE_FIREBASE_MCP" == "1" ]]; then
         echo "    firebase MCP → npx + Firebase CLI auth; run: firebase login (or configure ADC)"
-        echo "      project dir: ${FIREBASE_MCP_DIR:-NEEDS FIREBASE_PROJECT_DIR}; tools: $FIREBASE_MCP_TOOLS"
-        echo "      IAM read: roles/cloudconfig.viewer; write: roles/cloudconfig.admin"
-        echo "      Codex: codex mcp add firebase -- npx -y firebase-tools@latest mcp --dir \"$FIREBASE_MCP_DIR\" --tools \"$FIREBASE_MCP_TOOLS\""
+        echo "      project dir: ${FIREBASE_MCP_DIR:-NEEDS FIREBASE_PROJECT_DIR}; access: $FIREBASE_MCP_ACCESS"
+        if [[ "$FIREBASE_MCP_ACCESS" == "full" ]]; then
+          echo "      features: $FIREBASE_MCP_FEATURES"
+          echo "      authority: full side-effecting surface (read, write, create, delete, send, initialize, deploy)"
+          echo "      safety: availability is not execution approval; per-action confirmation, audit evidence, and rollback remain required"
+        else
+          echo "      tools: $FIREBASE_MCP_TOOLS"
+          echo "      IAM read: roles/cloudconfig.viewer; write: roles/cloudconfig.admin"
+        fi
+        echo "      Codex: codex mcp add firebase -- npx -y firebase-tools@latest mcp --dir \"$FIREBASE_MCP_DIR\" $FIREBASE_MCP_SCOPE_FLAG \"$FIREBASE_MCP_SCOPE\""
       else echo "    firebase MCP → disabled in config"; fi
     fi
   done

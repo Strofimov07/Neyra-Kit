@@ -78,10 +78,14 @@ Run `install.sh --doctor <repo> <config.sh>` to print exactly which components w
 
 For Firebase growth operations, set `ENABLE_FIREBASE_MCP=1`, point
 `FIREBASE_PROJECT_DIR` at a consumer-owned directory containing `firebase.json`,
-and select the smallest exact tool allowlist in `FIREBASE_MCP_TOOLS`. The example
-permits the Firebase documentation resource required by Crashlytics reports,
-Remote Config reads/writes, and read-only Crashlytics analysis, without exposing
-generic project creation or deployment tools. Authenticate
+and choose an explicit access profile. `FIREBASE_MCP_ACCESS=limited` is the
+reusable default and uses the exact `FIREBASE_MCP_TOOLS` allowlist. An operator
+who owns the whole Firebase surface can opt into `full`, which enables every
+feature group listed in `FIREBASE_MCP_FEATURES`, including administrative and
+side-effecting tools. Tool availability is not blanket execution approval:
+live writes, deletes, sends, initialization, and deploys still require a visible
+target, per-action confirmation, audit evidence, and a rollback or containment
+path. Authenticate
 with `firebase login` for an interactive workstation or Application Default
 Credentials for headless use. Grant `roles/cloudconfig.viewer` for inspection
 and `roles/cloudconfig.admin` only to identities that publish live templates.
@@ -91,6 +95,7 @@ and `roles/cloudconfig.admin` only to identities that publish live templates.
 - The installer **refuses to write** unless `$TARGET` is a git repo.
 - When `ENABLE_NEYRA_MCP=1`, the written `.mcp.json` contains a **machine-local absolute path** and is auto-added to the target's `.gitignore` — don't commit it. Secrets stay as `${ENV}` placeholders (never written to disk).
 - When `ENABLE_FIREBASE_MCP=1`, `.mcp.json` contains the consumer's absolute Firebase project path and is gitignored. Authentication remains in Firebase CLI or ADC; legacy `FIREBASE_TOKEN` and service-account key files are not supported by the template.
+- The `full` Firebase profile expands the MCP surface, not the authenticated identity's IAM. Firebase and Google Cloud permissions still decide which operations can succeed.
 - Re-running is idempotent; the skill sync uses `rsync --delete` (when available) so skills removed upstream are pruned in the target.
 
 ## Updating the kit

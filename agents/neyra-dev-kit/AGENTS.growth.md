@@ -43,12 +43,19 @@ observable signal. Use standard analytics event names (Firebase/GA4 standard:
   snapshot the active template, preserve unrelated parameters and condition
   order, show the exact diff, name the rollback version, and get explicit human
   confirmation.
+- Use an ETag-aware publisher. If the MCP template does not carry its active
+  ETag, prefer Firebase CLI deploy; do not silently replace a failed non-forced
+  write with a forced overwrite.
 - After publish, verify the active template and a real client fetch separately
   from measurement delivery to GA4, BigQuery, or the product-owned event mirror.
 - Before requesting a Crashlytics report, read the bundled
   `crashlytics_reports_guide` through `firebase_read_resources`.
 - Credentials remain in Firebase CLI or Application Default Credentials. Never
   put refresh tokens, access tokens, or service-account keys in repo settings.
+- `FIREBASE_MCP_ACCESS=full` exposes the complete configured administration
+  surface but does not waive per-action confirmation. Before write/delete/send,
+  initialization, creation, or deploy, state the target and side effect, obtain
+  explicit confirmation, and retain audit plus rollback/containment evidence.
 
 ## Transparency rule (mandatory in autonomous, delegated, and `/loop` runs)
 - Every turn names the active skill(s)/subagent(s) it used or assumed, and why.
