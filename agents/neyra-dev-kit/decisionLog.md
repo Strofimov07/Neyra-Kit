@@ -49,14 +49,30 @@ Firebase's official MCP can operate Remote Config and Crashlytics, but it does
 not replace GA4, BigQuery, or a product event mirror for outcome measurement.
 
 **Decision.** Add the official Firebase MCP as a default-off connector for dev
-and growth kit consumers. Use an exact tool allowlist rather than feature
-auto-discovery, keep project directories and Firebase project IDs in consumer
-settings, and keep authentication in Firebase CLI or Application Default
-Credentials. Growth work must separate control and measurement planes, read and
-snapshot before writes, show an exact diff, require human confirmation, and
-retain a rollback version.
+and growth kit consumers. Use an exact tool allowlist, keep project directories
+and Firebase project IDs in consumer settings, and keep authentication in
+Firebase CLI or Application Default Credentials. Growth work must separate
+control and measurement planes, read and snapshot before writes, show an exact
+diff, require human confirmation, and retain a rollback version.
 
 **Consequence.** Consumers can run repeatable Remote Config experiments without
 making Firebase mandatory or storing credentials in the kit. A configured arm
 is no longer treated as analytics evidence; metric source, owner, guard metrics,
 observation window, and blind spot remain mandatory before launch.
+
+## 2026-07-19 — Firebase gains an owner-operated full profile (v0.29.0)
+
+**Context.** The reusable v0.28.0 connector intentionally exposed a narrow
+eight-tool surface. The Browser owner needs the complete Firebase administration
+surface for project operations, while the shared default still needs to remain
+least privilege for consumers that did not request that authority.
+
+**Decision.** Keep the exact allowlist as the `limited` default and add an
+explicit `full` profile that enables the complete known Firebase feature-group
+surface. Full availability does not waive per-action confirmation, audit, or
+rollback/containment requirements for live side effects.
+
+**Consequence.** Owner-operated consumers can read, write, create, delete, send,
+initialize, and deploy through the official Firebase MCP without broadening the
+default consumer surface. Firebase and Google Cloud IAM still decide which
+discovered operations can execute.

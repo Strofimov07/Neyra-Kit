@@ -47,6 +47,9 @@ Derived from the canonical Notion role model. This is a runtime profile, not the
 - Retrieve the active template and version immediately before editing.
 - Preserve unrelated parameters, condition ordering, and active experiment
   values. Save a pre-change snapshot and name the rollback version.
+- Prefer a publisher that refreshes the active ETag immediately before the
+  write. If the MCP client cannot carry that ETag, use the Firebase CLI deploy
+  path; do not switch to a forced overwrite merely to make the call pass.
 - Show the exact proposed diff and require explicit human confirmation before
   publishing a live template.
 
@@ -65,13 +68,29 @@ Derived from the canonical Notion role model. This is a runtime profile, not the
 - Control-plane activation and measurement-plane observability are reported as
   separate verified results.
 
+### 4. Full Firebase administration remains action-gated
+
+- `FIREBASE_MCP_ACCESS=full` makes the complete configured Firebase feature
+  surface available to the operator; it does not pre-authorize every mutation.
+- Before a write, delete, send, initialization, project/app creation, or deploy,
+  name the target and side effect, show the proposed action, obtain explicit
+  per-action confirmation, and record the result plus rollback or containment.
+- Read-only discovery and analysis may run without a mutation checkpoint when
+  they stay inside the user-authorized project and do not expose sensitive data.
+
+**Success criteria**
+- Full management is possible without making destructive behavior invisible or
+  unauditable.
+
 ## Common rationalizations (and why they are invalid)
 
 | The excuse | Why it is wrong → what to do |
 |---|---|
 | "The arm exists, so the experiment is measurable." | Configuration is not outcome data. Identify the GA4, BigQuery, or event-mirror query first. |
 | "It is only one parameter." | Publishing replaces a versioned template and condition order matters. Read, snapshot, diff, confirm, then write. |
+| "The non-forced MCP write failed, so use force." | A missing ETag is a concurrency-safety failure, not permission to overwrite. Use an ETag-aware deploy path or re-read and explicitly approve the forced path. |
 | "We can add guard metrics after launch." | A launch without guards can optimize conversion while harming retention or stability. Define them before publish. |
+| "Full access means every action is already approved." | Access controls availability, not intent. Confirm the concrete side effect and preserve audit/rollback evidence. |
 
 ## Success criteria
 

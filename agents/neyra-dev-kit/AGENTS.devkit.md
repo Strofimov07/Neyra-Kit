@@ -68,4 +68,4 @@ start with `test-first` — a failing test (RED) before the change.
 - Typed-contract convention: {{CONTRACT_STACK}}
 - Linear workspace: {{LINEAR_WORKSPACE}} (every issue MUST have a project — see `linear-router`).
 
-<!-- kit-version: 0.28.0 -->
+<!-- kit-version: 0.29.0 -->

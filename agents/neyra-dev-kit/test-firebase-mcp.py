@@ -8,6 +8,10 @@ from pathlib import Path
 
 KIT = Path(__file__).resolve().parent
 INSTALLER = KIT / "install.sh"
+FULL_FEATURES = (
+    "apphosting,auth,core,crashlytics,realtimedatabase,dataconnect,firestore,"
+    "functions,messaging,remoteconfig,storage,developerknowledge"
+)
 
 
 def git(root: Path, *args: str) -> None:
@@ -34,7 +38,8 @@ class FirebaseMCPInstallerTests(unittest.TestCase):
         (firebase_dir / "firebase.json").write_text("{}\n", encoding="utf-8")
         return tmp, root
 
-    def write_config(self, root: Path, enabled: bool) -> Path:
+    def write_config(self, root: Path, enabled: bool, access: str | None = None) -> Path:
+        access_config = [] if access is None else [f'FIREBASE_MCP_ACCESS="{access}"']
         config = root / "consumer.sh"
         config.write_text(
             "\n".join(
@@ -50,7 +55,9 @@ class FirebaseMCPInstallerTests(unittest.TestCase):
                     "ENABLE_NEYRA_MCP=0",
                     f"ENABLE_FIREBASE_MCP={int(enabled)}",
                     'FIREBASE_PROJECT_DIR="settings/firebase"',
+                    *access_config,
                     'FIREBASE_MCP_TOOLS="firebase_read_resources,remoteconfig_get_template,remoteconfig_update_template,crashlytics_get_report"',
+                    f'FIREBASE_MCP_FEATURES="{FULL_FEATURES}"',
                     "ENABLE_CURSOR_SKILLS=0",
                     "ENABLE_HOOKS=0",
                     "ENABLE_CODEX=0",
@@ -108,6 +115,41 @@ class FirebaseMCPInstallerTests(unittest.TestCase):
             self.assertNotIn("firebase_token", serialized)
             self.assertNotIn("service-account", serialized)
             self.assertNotIn("credential", serialized)
+
+    def test_full_connector_renders_all_feature_groups_without_a_tool_allowlist(self):
+        tmp, root = self.make_consumer()
+        with tmp:
+            config = self.write_config(root, enabled=True, access="full")
+
+            result = self.run_install(root, config)
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            payload = json.loads((root / ".mcp.json").read_text(encoding="utf-8"))
+            self.assertEqual(
+                [
+                    "-y",
+                    "firebase-tools@latest",
+                    "mcp",
+                    "--dir",
+                    str(root / "settings" / "firebase"),
+                    "--only",
+                    FULL_FEATURES,
+                ],
+                payload["mcpServers"]["firebase"]["args"],
+            )
+
+    def test_full_connector_doctor_warns_about_side_effecting_authority(self):
+        tmp, root = self.make_consumer()
+        with tmp:
+            config = self.write_config(root, enabled=True, access="full")
+
+            result = self.run_install(root, config, "--doctor")
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            output = result.stdout.lower()
+            self.assertIn("full", output)
+            self.assertIn("side-effecting", output)
+            self.assertIn("per-action confirmation", output)
 
     def test_doctor_reports_auth_iam_and_codex_setup_without_credentials(self):
         tmp, root = self.make_consumer()
