@@ -35,6 +35,21 @@ observable signal. Use standard analytics event names (Firebase/GA4 standard:
 - Do NOT invent custom purchase event names (e.g. `subscription_purchased`) — map to the canonical standard equivalent first, add custom params for extra dimensions.
 - Every new tracking call requires a corresponding analytics spec (event name, params, trigger condition) reviewed by `analytics-instrumentation`.
 
+## Firebase experiment operations
+- Firebase MCP is optional and default-off. When enabled, use it for Remote
+  Config and Crashlytics operations; do not represent it as a GA4
+  reporting connector.
+- Before a live Remote Config publish: define the metric contract, read and
+  snapshot the active template, preserve unrelated parameters and condition
+  order, show the exact diff, name the rollback version, and get explicit human
+  confirmation.
+- After publish, verify the active template and a real client fetch separately
+  from measurement delivery to GA4, BigQuery, or the product-owned event mirror.
+- Before requesting a Crashlytics report, read the bundled
+  `crashlytics_reports_guide` through `firebase_read_resources`.
+- Credentials remain in Firebase CLI or Application Default Credentials. Never
+  put refresh tokens, access tokens, or service-account keys in repo settings.
+
 ## Transparency rule (mandatory in autonomous, delegated, and `/loop` runs)
 - Every turn names the active skill(s)/subagent(s) it used or assumed, and why.
 - Distinguish observed metric movement from assumed correlation.
@@ -47,4 +62,4 @@ observable signal. Use standard analytics event names (Firebase/GA4 standard:
 - Typed-contract convention: {{CONTRACT_STACK}}
 - Linear workspace: {{LINEAR_WORKSPACE}} (every issue MUST have a project — see `linear-router`).
 
-<!-- kit-version: 0.3.0 -->
+<!-- kit-version: 0.28.0 -->

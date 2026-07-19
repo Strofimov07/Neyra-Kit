@@ -57,7 +57,7 @@ fi
 
 # Defaults; overridden by config.
 ENABLE_LINEAR_ROUTER=1; ENABLE_LOCALIZATION_CHECKER=1; ENABLE_CONTRACT_CHECKER=1
-ENABLE_NEYRA_MCP=0; ENABLE_CURSOR_SKILLS=1; ENABLE_HOOKS=1
+ENABLE_NEYRA_MCP=0; ENABLE_FIREBASE_MCP=0; ENABLE_CURSOR_SKILLS=1; ENABLE_HOOKS=1
 REPO_NAME=""; STACK=""; BUILD_VERIFY_CMD=""; LOCALES=""; I18N_MECHANISM=""
 CONTRACT_STACK=""; LINEAR_WORKSPACE=""; LINEAR_ROUTING=""
 # Linear MCP server-instance prefix the linear-router's tools resolve against. This is
@@ -72,9 +72,19 @@ FIGMA_MCP_PREFIX=""
 # Optional project-scoped Neyra MCP entrypoint. Consumer config must provide it;
 # the standalone canonical kit has no product runtime dependency.
 NEYRA_MCP_ENTRY=""
+FIREBASE_PROJECT_DIR=""
+FIREBASE_MCP_TOOLS="firebase_read_resources,remoteconfig_get_template,remoteconfig_update_template,crashlytics_get_issue,crashlytics_list_events,crashlytics_batch_get_events,crashlytics_list_notes,crashlytics_get_report"
 # NOTE: the config is executed as shell (sourced) — only run with configs you have reviewed.
 # shellcheck disable=SC1090
 source "$CONFIG"
+
+FIREBASE_MCP_DIR=""
+if [[ -n "$FIREBASE_PROJECT_DIR" ]]; then
+  case "$FIREBASE_PROJECT_DIR" in
+    /*) FIREBASE_MCP_DIR="$FIREBASE_PROJECT_DIR" ;;
+    *) FIREBASE_MCP_DIR="$TARGET/$FIREBASE_PROJECT_DIR" ;;
+  esac
+fi
 
 say()  { printf '  %s\n' "$*"; }
 do_()  { if [[ $DRY -eq 1 ]]; then say "[dry] $*"; else eval "$*"; fi; }
@@ -84,9 +94,10 @@ render() { # render <template-file> -> stdout. Values passed via env (no code in
   REPO_NAME="$REPO_NAME" STACK="$STACK" BUILD_VERIFY_CMD="$BUILD_VERIFY_CMD" \
   LOCALES="$LOCALES" I18N_MECHANISM="$I18N_MECHANISM" CONTRACT_STACK="$CONTRACT_STACK" \
   LINEAR_WORKSPACE="$LINEAR_WORKSPACE" LINEAR_ROUTING="$LINEAR_ROUTING" NEYRA_MCP_ENTRY="$NEYRA_MCP_ENTRY" \
-  LINEAR_MCP_PREFIX="$LINEAR_MCP_PREFIX" \
+  LINEAR_MCP_PREFIX="$LINEAR_MCP_PREFIX" FIREBASE_MCP_DIR="$FIREBASE_MCP_DIR" \
+  FIREBASE_MCP_TOOLS="$FIREBASE_MCP_TOOLS" \
   perl -0777 -pe '
-    for my $k (qw(REPO_NAME STACK BUILD_VERIFY_CMD LOCALES I18N_MECHANISM CONTRACT_STACK LINEAR_WORKSPACE LINEAR_ROUTING NEYRA_MCP_ENTRY LINEAR_MCP_PREFIX)) {
+    for my $k (qw(REPO_NAME STACK BUILD_VERIFY_CMD LOCALES I18N_MECHANISM CONTRACT_STACK LINEAR_WORKSPACE LINEAR_ROUTING NEYRA_MCP_ENTRY LINEAR_MCP_PREFIX FIREBASE_MCP_DIR FIREBASE_MCP_TOOLS)) {
       my $v = $ENV{$k} // ""; s/\{\{\Q$k\E\}\}/$v/g;
     }
   ' "$1"
@@ -111,6 +122,13 @@ if [[ $DOCTOR -eq 1 ]]; then
     if [[ "$srv" == "neyra" ]]; then
       if [[ "$ENABLE_NEYRA_MCP" == "1" ]]; then echo "    neyra MCP (.mcp.json) → needs NEYRA_API_URL / NEYRA_API_KEY in your env"
       else echo "    neyra MCP → disabled in config"; fi
+    elif [[ "$srv" == "firebase" ]]; then
+      if [[ "$ENABLE_FIREBASE_MCP" == "1" ]]; then
+        echo "    firebase MCP → npx + Firebase CLI auth; run: firebase login (or configure ADC)"
+        echo "      project dir: ${FIREBASE_MCP_DIR:-NEEDS FIREBASE_PROJECT_DIR}; tools: $FIREBASE_MCP_TOOLS"
+        echo "      IAM read: roles/cloudconfig.viewer; write: roles/cloudconfig.admin"
+        echo "      Codex: codex mcp add firebase -- npx -y firebase-tools@latest mcp --dir \"$FIREBASE_MCP_DIR\" --tools \"$FIREBASE_MCP_TOOLS\""
+      else echo "    firebase MCP → disabled in config"; fi
     fi
   done
   echo "  Notion: not required by the kit."
@@ -339,6 +357,29 @@ for srv in "${MCP_SERVERS[@]}"; do
       # .mcp.json embeds a machine-local absolute path → keep it out of git.
       grep -qxF '.mcp.json' "$TARGET/.gitignore" 2>/dev/null || printf '.mcp.json\n' >> "$TARGET/.gitignore"
       say ".mcp.json gitignored (contains a machine-local path; secrets stay as \${ENV} placeholders)"
+    fi
+  elif [[ "$srv" == "firebase" && "$ENABLE_FIREBASE_MCP" == "1" ]]; then
+    echo "MCP — official Firebase growth server (.mcp.json):"
+    if [[ -z "$FIREBASE_MCP_DIR" || ! -f "$FIREBASE_MCP_DIR/firebase.json" ]]; then
+      say "WARN: FIREBASE_PROJECT_DIR must resolve to a directory containing firebase.json — skipping"
+    else
+      rendered_mcp="$(render "$KIT_DIR/mcp/firebase.mcp.json.tmpl")"
+      dest="$TARGET/.mcp.json"
+      if [[ $DRY -eq 1 ]]; then
+        say "[dry] merge 'firebase' server into $dest"
+      elif [[ -f "$dest" ]] && command -v jq >/dev/null 2>&1; then
+        tmp="$(mktemp)"; tmpnew="$(mktemp)"; printf '%s' "$rendered_mcp" > "$tmpnew"
+        if jq -s '.[0] * .[1]' "$dest" "$tmpnew" > "$tmp"; then mv "$tmp" "$dest"; else rm -f "$tmp" "$tmpnew"; echo "error: jq merge failed; .mcp.json unchanged" >&2; exit 1; fi
+        rm -f "$tmpnew"
+        say "merged 'firebase' into .mcp.json (other servers preserved)"
+      elif [[ -f "$dest" ]]; then
+        say "WARN: jq is required to preserve existing MCP servers — skipping Firebase MCP"
+        continue
+      else
+        printf '%s\n' "$rendered_mcp" > "$dest"; say "wrote $dest"
+      fi
+      grep -qxF '.mcp.json' "$TARGET/.gitignore" 2>/dev/null || printf '.mcp.json\n' >> "$TARGET/.gitignore"
+      say ".mcp.json gitignored (machine-local project path; authentication stays in Firebase CLI or ADC)"
     fi
   fi
 done

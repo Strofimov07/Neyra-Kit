@@ -39,3 +39,24 @@ self-contained multi-file smoke in the consumer `doctor.sh` copy.
 **Consequence.** Multi-file Codex edits now receive the same protection and
 formatting coverage as separate Claude Code edits. Invalid or unparsable hook
 payloads remain fail-open, preserving the existing anti-wedge contract.
+
+## 2026-07-19 — Firebase becomes an opt-in growth control plane (v0.28.0)
+
+**Context.** A Browser Remote Config migration reached a verified client merge
+but could not complete the live template gate because the growth kit provided
+neither a Firebase MCP connector nor a safe experiment-operations protocol.
+Firebase's official MCP can operate Remote Config and Crashlytics, but it does
+not replace GA4, BigQuery, or a product event mirror for outcome measurement.
+
+**Decision.** Add the official Firebase MCP as a default-off connector for dev
+and growth kit consumers. Use an exact tool allowlist rather than feature
+auto-discovery, keep project directories and Firebase project IDs in consumer
+settings, and keep authentication in Firebase CLI or Application Default
+Credentials. Growth work must separate control and measurement planes, read and
+snapshot before writes, show an exact diff, require human confirmation, and
+retain a rollback version.
+
+**Consequence.** Consumers can run repeatable Remote Config experiments without
+making Firebase mandatory or storing credentials in the kit. A configured arm
+is no longer treated as analytics evidence; metric source, owner, guard metrics,
+observation window, and blind spot remain mandatory before launch.

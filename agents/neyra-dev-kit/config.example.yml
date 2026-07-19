@@ -15,6 +15,9 @@
 #   ENABLE_LOCALIZATION_CHECKER  0/1
 #   ENABLE_CONTRACT_CHECKER      0/1
 #   ENABLE_NEYRA_MCP             0/1  (project-scoped Neyra MCP into .mcp.json; off in the standard rollout)
+#   ENABLE_FIREBASE_MCP          0/1  (official Firebase MCP for growth operations; default off)
+#   FIREBASE_PROJECT_DIR         consumer-owned directory containing firebase.json (relative to repo or absolute)
+#   FIREBASE_MCP_TOOLS           comma-separated exact Firebase tool allowlist; avoid broad feature auto-discovery
 #   ENABLE_CURSOR_SKILLS         0/1  (symlink dev-skills into .cursor/skills/ for Cursor)
 #   LINEAR_MCP_PREFIX            your Linear MCP server-instance id, e.g. mcp__<hash> (find it in Claude Code via /mcp).
 #                                Per-user — a friend MUST set their own. Empty → linear-router is skipped (not installed broken).

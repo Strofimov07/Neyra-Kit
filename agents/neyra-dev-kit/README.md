@@ -15,7 +15,7 @@ Portable engineering skill stack for **every Neyra-adjacent repo** (TradingCoreM
 
 **Governance fragment** — `AGENTS.neyra-devkit.md`: the skill↔subagent map, the transparency rule (name the active skill each step in `/loop`/autonomous runs), and the post-implementation gate. Include it from the target repo's `AGENTS.md` / `CLAUDE.md`.
 
-**MCP layer** — wires the project-scoped **Neyra MCP server** (memory/config/aso/finance/browser tools) into the repo's `.mcp.json` via jq deep-merge (existing servers preserved; secrets stay as `${ENV}` placeholders, never committed). Global MCPs (Linear, Notion, Figma) are user-level and already available everywhere — the kit does **not** ship those. Toggle per repo with `ENABLE_NEYRA_MCP`.
+**MCP layer** — wires opt-in project-scoped servers into the repo's `.mcp.json` via jq deep-merge (existing servers preserved). The Neyra bridge uses `${ENV}` placeholders; the official Firebase growth connector uses Firebase CLI login or Application Default Credentials and stores no credential in the repo. Global MCPs (Linear, Notion, Figma) remain user-level. Toggle per repo with `ENABLE_NEYRA_MCP` and `ENABLE_FIREBASE_MCP`.
 
 ## Why this design
 - **Single source of truth.** The canonical skills/subagents live in this standalone Neyra-Kit repository; the installer copies from them, so there are no vendored duplicates to drift. Re-run install to refresh.
@@ -30,7 +30,7 @@ The engine is manifest-driven (`manifests/<kit>.sh`); install any kit with `inst
 | **product** | research-insights / discovery / solution-design / delivery-planning / knowledge-memory profiles | product-brainstormer, solution-designer, delivery-planner (+ linear-router) | PM / discovery work |
 | **growth** | growth-analytics / aso / finance-business-impact profiles | growth-analytics, analytics-instrumentation (+ linear-router) | growth / ASO work |
 
-**The core is MCP-independent.** Every kit's core = skills + subagents + governance and installs with **no MCP** (`ENABLE_NEYRA_MCP=0` in the product/growth example configs; verified). MCP (the Neyra memory/config server today; Notion/Figma/Amplitude later) is an **additive** layer of extra data/capabilities — opt in per repo, never required for the core to work.
+**The core is MCP-independent.** Every kit's core = skills + subagents + governance and installs with **no MCP** (`ENABLE_NEYRA_MCP=0` and `ENABLE_FIREBASE_MCP=0` in example configs; verified). MCP is an **additive** layer of extra data/capabilities — opt in per repo, never required for the core to work. The Firebase connector exposes Remote Config and Crashlytics growth operations; GA4/BigQuery remains a separate measurement source.
 
 ## Multi-tool surfaces (Claude Code + Cursor + Codex)
 `SKILL.md` is an open standard read by all three tools, and each exposes
@@ -76,10 +76,21 @@ The one exception is **`linear-router`**, which calls a Linear MCP whose tool id
 
 Run `install.sh --doctor <repo> <config.sh>` to print exactly which components work out-of-the-box and which need external setup, before installing.
 
+For Firebase growth operations, set `ENABLE_FIREBASE_MCP=1`, point
+`FIREBASE_PROJECT_DIR` at a consumer-owned directory containing `firebase.json`,
+and select the smallest exact tool allowlist in `FIREBASE_MCP_TOOLS`. The example
+permits the Firebase documentation resource required by Crashlytics reports,
+Remote Config reads/writes, and read-only Crashlytics analysis, without exposing
+generic project creation or deployment tools. Authenticate
+with `firebase login` for an interactive workstation or Application Default
+Credentials for headless use. Grant `roles/cloudconfig.viewer` for inspection
+and `roles/cloudconfig.admin` only to identities that publish live templates.
+
 ## Safety notes
 - **Configs are executed as shell** (the installer `source`s `configs/<repo>.sh`). Only run the installer with a config you have reviewed.
 - The installer **refuses to write** unless `$TARGET` is a git repo.
 - When `ENABLE_NEYRA_MCP=1`, the written `.mcp.json` contains a **machine-local absolute path** and is auto-added to the target's `.gitignore` — don't commit it. Secrets stay as `${ENV}` placeholders (never written to disk).
+- When `ENABLE_FIREBASE_MCP=1`, `.mcp.json` contains the consumer's absolute Firebase project path and is gitignored. Authentication remains in Firebase CLI or ADC; legacy `FIREBASE_TOKEN` and service-account key files are not supported by the template.
 - Re-running is idempotent; the skill sync uses `rsync --delete` (when available) so skills removed upstream are pruned in the target.
 
 ## Updating the kit

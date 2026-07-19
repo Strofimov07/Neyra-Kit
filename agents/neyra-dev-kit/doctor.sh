@@ -38,6 +38,9 @@ run "external-leak regression" python3 "$KIT/test-external-leaks.py"
 if [ -f "$KIT/test-codex-hooks.py" ]; then
   run "Codex hook regression" python3 "$KIT/test-codex-hooks.py"
 fi
+if [ -f "$KIT/test-firebase-mcp.py" ]; then
+  run "Firebase MCP regression" python3 "$KIT/test-firebase-mcp.py"
+fi
 if [ -f "$ROOT/agents/design-skills/impeccable/scripts/live-server.security.test.mjs" ]; then
   if command -v node >/dev/null 2>&1; then
     run "impeccable live security" node --test "$ROOT/agents/design-skills/impeccable/scripts/live-server.security.test.mjs"

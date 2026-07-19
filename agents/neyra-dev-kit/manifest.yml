@@ -46,10 +46,15 @@ governance:
 # MCP layer — project-scoped servers wired into the target repo's .mcp.json.
 # Global MCPs (Linear, Notion, Figma) are user-level and already available — not shipped here.
 mcp:
-  template: agents/neyra-dev-kit/mcp/neyra.mcp.json.tmpl
   merges_into: .mcp.json            # jq deep-merge; existing servers preserved
-  enable_key: enable_neyra_mcp
   servers:
     - id: neyra                     # optional local node bridge supplied by consumer config
+      template: agents/neyra-dev-kit/mcp/neyra.mcp.json.tmpl
+      enable_key: enable_neyra_mcp
       entry: config:NEYRA_MCP_ENTRY # product runtime path is never owned by the shared kit
       secrets: env-placeholders     # ${NEYRA_API_URL} etc. — never committed
+    - id: firebase                  # official Firebase CLI MCP for growth operations
+      template: agents/neyra-dev-kit/mcp/firebase.mcp.json.tmpl
+      enable_key: enable_firebase_mcp
+      project_dir: config:FIREBASE_PROJECT_DIR
+      auth: firebase-cli-or-adc     # no credential material in repository files
