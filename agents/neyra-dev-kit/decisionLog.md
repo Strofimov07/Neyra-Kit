@@ -76,3 +76,22 @@ rollback/containment requirements for live side effects.
 initialize, and deploy through the official Firebase MCP without broadening the
 default consumer surface. Firebase and Google Cloud IAM still decide which
 discovered operations can execute.
+
+## 2026-07-20 — Firebase adoption gets explicit readiness states (v0.29.1)
+
+**Context.** The connector and full administration profile made Firebase tools
+reusable, but consumers still had to reconstruct the product path from tool
+setup through event ownership, Remote Config safety, runtime measurement, and
+experiment activation. That made “MCP is configured” easy to overstate as
+“growth analytics is production-ready.”
+
+**Decision.** Add one generic adoption guide that separates tool-ready,
+contract-ready, measurement-verified, experiment-ready, and experiment-live
+states. Pin the required control/measurement boundary, correlation evidence,
+safe defaults, assignment denominator, exact diff, approval, ETag-aware publish,
+and rollback gates in the Firebase regression suite. Product facts remain in
+consumer repositories.
+
+**Consequence.** Every Neyra product can adopt the same guarded workflow without
+copying Browser-specific configuration into the Kit, and delivery summaries must
+state which readiness level is actually proven.

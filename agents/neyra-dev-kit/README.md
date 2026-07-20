@@ -89,6 +89,9 @@ path. Authenticate
 with `firebase login` for an interactive workstation or Application Default
 Credentials for headless use. Grant `roles/cloudconfig.viewer` for inspection
 and `roles/cloudconfig.admin` only to identities that publish live templates.
+Use [FIREBASE_GROWTH_ADOPTION.md](FIREBASE_GROWTH_ADOPTION.md) for the reusable
+cross-product path from connector setup through analytics delivery, guarded
+Remote Config activation, production measurement, and rollback evidence.
 
 ## Safety notes
 - **Configs are executed as shell** (the installer `source`s `configs/<repo>.sh`). Only run the installer with a config you have reviewed.
