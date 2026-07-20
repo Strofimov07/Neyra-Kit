@@ -8,6 +8,7 @@ from pathlib import Path
 
 KIT = Path(__file__).resolve().parent
 INSTALLER = KIT / "install.sh"
+ADOPTION_GUIDE = KIT / "FIREBASE_GROWTH_ADOPTION.md"
 FULL_FEATURES = (
     "apphosting,auth,core,crashlytics,realtimedatabase,dataconnect,firestore,"
     "functions,messaging,remoteconfig,storage,developerknowledge"
@@ -166,6 +167,36 @@ class FirebaseMCPInstallerTests(unittest.TestCase):
             self.assertIn("roles/cloudconfig.admin", output)
             self.assertIn("codex mcp add firebase", output)
             self.assertNotIn("firebase_token", output)
+
+    def test_cross_product_adoption_guide_separates_readiness_states(self):
+        guide = ADOPTION_GUIDE.read_text(encoding="utf-8")
+        lower = guide.lower()
+
+        for required in (
+            "tool-ready",
+            "contract-ready",
+            "measurement-verified",
+            "experiment-ready",
+            "experiment-live",
+            "limited",
+            "full",
+            "event map",
+            "correlation",
+            "safe local default",
+            "assignment event and denominator",
+            "exact full-template diff",
+            "explicit approval",
+            "etag-aware",
+            "firebase debugview",
+            "backend mirror",
+            "ga4",
+            "bigquery",
+            "rollback",
+        ):
+            self.assertIn(required, lower)
+
+        self.assertNotIn("nebula70", lower)
+        self.assertNotIn("ai browser", lower)
 
 
 if __name__ == "__main__":
