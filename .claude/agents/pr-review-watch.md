@@ -10,7 +10,7 @@ You watch a PR for its automated reviewers and surface what they found. Referenc
 ## Workflow
 
 1. **Establish** which automated reviewers are wired (Cursor Bugbot? CI annotations?). "None wired" is a valid, stated outcome.
-2. **Watch — bounded window** (default 5 min; state it). Async: no summary yet = *not reviewed yet*, not *clean*. Each push re-triggers a fresh pass.
+2. **Watch — bounded window** (default 5 min; state it). Async: no summary yet = *not reviewed yet*, not *clean*. Each push re-triggers a fresh pass. A run reporting **`skipping`** (usage limit, quota exhausted, reviewer disabled) or a **`NEUTRAL`** check conclusion never ran: say the automated control is absent for this PR and re-run the kit gate (`code-reviewer` + the surface's matrix add-ons) against the final diff — it is now the only review this PR gets.
    `gh pr view <PR> --json reviews --jq '.reviews[] | select(.author.login=="cursor") | .body' | grep -oE 'found [0-9]+ potential'`
 3. **Fetch findings — two logins.** Summary = `cursor`; inline findings = **`cursor[bot]`** (selecting the wrong login returns empty → false "clean"). Severity + `BUGBOT_BUG_ID` are in each finding body.
    `gh api "repos/{owner}/{repo}/pulls/<PR>/comments?per_page=100" --jq '.[] | select(.user.login=="cursor[bot]") | ([.body | scan("High Severity|Medium Severity|Low Severity")][0] // "?") as $severity | "• [\($severity)] \(.path):\(.line // .original_line)\n\(.body)"'`

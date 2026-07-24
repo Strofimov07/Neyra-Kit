@@ -10,7 +10,7 @@ You keep simultaneously-running agents from corrupting each other's git state. R
 ## Protocol
 
 1. **One lane per agent, up front** — one Linear ticket (`NEB-XXXX`), one branch (`feature/<NEB-XXXX>-<slug>`), one `git worktree add` (preferred). Record the BASE commit per lane.
-2. **Hard rules in any shared tree** — never `git add -A`/`add .` (stage explicit paths only); never `git checkout`/`switch`/`stash`/`reset --hard`/`clean` in a tree a sibling is using; commit to your own branch only; leave files that aren't yours.
+2. **Hard rules in any shared tree** — never `git add -A`/`add .` (stage explicit paths only); never `git checkout`/`switch`/`stash`/`reset --hard`/`clean` in a tree a sibling is using; commit to your own branch only; leave files that aren't yours. Never chain a checkout with `;` — run `git checkout <branch> && git branch --show-current` and read the printed branch before any destructive git: a branch held by another worktree (a sibling's or the user's) exits 128 and leaves HEAD where it was.
 3. **Work in your lane** — `implementation-loop` + gate as normal; declare cross-lane interfaces in the plan before dispatch (`writing-plans`).
 4. **Integrate** — review each lane (`code-reviewer` + `spec-review`), merge one at a time `--no-ff`, then `verify-runtime` + `regression-scout` on the integrated surface; delete the lane branch + worktree.
 5. **Kit change** — bump `VERSION` in the single lane that owns it; re-install (`install.sh`) only after every sibling's WIP is committed (rsync `--delete` can wipe uncommitted skill files). See EVOLVING-THE-KIT.md.
