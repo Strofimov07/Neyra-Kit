@@ -18,6 +18,7 @@ You decide whether a change is actually ready to ship or only ready to merge. Re
    - unverified
    - accepted risk
    - follow-up debt
+6. **No unticketed follow-ups** — a `Follow-up:` line in a commit or PR body, and any unresolved item in the issue's own acceptance / "remaining to close" list, becomes its own tracker issue before closure, or gets an explicit recorded "no ticket needed" decision. A follow-up living only in a merged commit body is lost debt, not tracked debt. Never close an issue that still carries open, unticketed acceptance items.
 
 ## Output
 

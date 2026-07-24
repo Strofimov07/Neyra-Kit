@@ -27,7 +27,11 @@ This operationalizes the `Self-Improvement Rule` in AGENTS.md as a triggerable l
 
 - What got corrected, what gate was skipped (and the stated reason), where the
   agent guessed or struggled, what the user had to repeat.
-- One-off or pattern? Check memory + AGENTS.md "Current lessons" before deciding.
+- One-off or pattern? Before deciding, check memory, the ledger (canonical
+  `signals.log` or the Linear kit backlog), and whether an existing rule already
+  covers it. Do not go looking for a named "lessons" section — rules live in the
+  working section they belong to, so the agent meets them at the moment of the
+  action, not in a changelog nobody re-reads when deciding.
 - **Identify the authoring boundary first:** run
   `python3 agents/neyra-dev-kit/source-policy.py --require-canonical`.
   - In the canonical Neyra-Kit repo, append one line to

@@ -59,6 +59,12 @@ Not guidelines. Violating any one can silently corrupt a sibling's work.
   run; that is the integration step.
 - **Files in the tree that aren't yours: leave them.** Don't move, delete, or
   stage them. If they block you, report BLOCKED to the orchestrator.
+- **Verify a checkout landed before anything destructive.** Run `git worktree list`
+  first: a branch already checked out in *any* other worktree — a sibling agent's or
+  the user's own — makes `git checkout` exit non-zero. If the next command doesn't
+  check that exit code, it runs against the branch you were already on. After any
+  checkout, confirm `git branch --show-current` equals the target before `reset
+  --hard`, `rebase`, or a commit.
 
 **Success criteria**
 - No agent touched a file, branch, stash, or index entry outside its own lane.
@@ -123,6 +129,9 @@ When a lane is ready:
   fragile; you will not reliably restore them.
 - "Same user's agents, so it's fine." Same machine, same dirty tree — the
   collision mechanics are identical to a two-developer shared checkout.
+- "The checkout ran, so I'm on the right branch." Only if you read its exit code.
+  A checkout blocked by another worktree leaves you exactly where you were — commits
+  then land on the wrong branch until someone notices.
 - "The overlap I just discovered is small — I'll handle it in my lane." The
   independence assumption was the dispatch's approval basis; it expired the
   moment you found the overlap. Report BLOCKED and let the batch re-approve.
@@ -132,6 +141,8 @@ When a lane is ready:
 - One ticket + one branch + one worktree per parallel agent. No exceptions.
 - Never `git add -A` in a parallel run, even in a dedicated worktree.
 - Never switch branches or run destructive git in a tree a sibling is using.
+- `git worktree list` before a checkout/reset/rebase; confirm `git branch
+  --show-current` after the checkout and before anything destructive.
 - Integration (merge + verify-runtime + regression-scout) is a named phase, not
   optional.
 - Kit VERSION bumps in the one lane that owns the kit change; never in two.

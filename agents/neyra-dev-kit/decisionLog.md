@@ -95,3 +95,34 @@ consumer repositories.
 **Consequence.** Every Neyra product can adopt the same guarded workflow without
 copying Browser-specific configuration into the Kit, and delivery summaries must
 state which readiness level is actually proven.
+
+## 2026-07-25 — Consumer-signal batch: gate rules from a product repo (v0.30.0)
+
+**Context.** A `kit-evolution` pass over a consumer's signal ledger (Быстрое Право,
+12 signals) surfaced six failures the shared gates did not catch, each with a
+concrete cost already paid: a signature change that left sibling test mocks stale
+turned `dev` CI red after merge; two "green locally, red in CI" runs where an
+in-memory fallback stood in for the CI's Redis/Postgres; six PRs whose automated
+reviewer was usage-limited while `pr-review-watch` reported the skip as a status
+rather than an absent control; a hardened client-IP primitive added for logging
+while the per-IP limiters stayed on the spoofable one; an issue moved to Done still
+carrying its own unresolved acceptance list, whose follow-ups lived only in a merged
+commit body and resurfaced three weeks later; and a `git checkout` blocked by another
+worktree whose non-zero exit went unchecked, landing three commits on the wrong branch.
+
+**Decision.** Land the six as rules inside the gates that own them — `verify-runtime`
+(mock-drift grep + infra-parity), `pr-review-watch` (skipping ≠ reviewed; escalate to
+the manual gate), `security-review` (migrate every consumer of a superseded trusted
+primitive), `release-readiness` (no unticketed follow-ups), `parallel-lanes` (worktree
+check before destructive git; verify the checkout actually landed) — each with a
+matching anti-rationalization row and a synchronized portable subagent wrapper. Fix two
+defects found in the same pass: `kit-evolution`'s step-1 anchor pointed at an "AGENTS.md
+Current lessons" section that exists in no consumer, and `goal-mode` was the only gate
+skill with no anti-rationalization block.
+
+**Consequence.** Rules sit where the agent already reads them at the moment of the
+action rather than in a changelog nobody re-reads while deciding. Product-specific facts
+from the same pass (pre-commit formatter behavior, which backends that repo's CI runs)
+stayed in the consumer's `AGENTS.md`, per the settings-owns-facts boundary. `goal-mode`'s
+hook-level enforcement stays open — the hooks have no goal-mode awareness at all — and is
+tracked as its own task instead of being claimed here.

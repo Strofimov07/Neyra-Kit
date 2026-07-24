@@ -101,6 +101,16 @@ stops at checkpoints, and never takes an irreversible action on its own.
 - On stop, the state is resumable and the reason is explicit.
 - A spinning loop stops on the non-productive heuristic instead of burning the iteration cap.
 
+## Common rationalizations (and why they're invalid)
+
+| The excuse | Why it's wrong → what to do |
+|---|---|
+| "The goal is obvious — I'll skip the spec and start." | Checkpoint 1 approves a plan, not an intention. Without EARS criteria, step 7 has nothing to re-evaluate against and the loop cannot tell progress from drift. |
+| "The user stated the goal — that IS the approval." | A goal statement is direction, not plan approval. Present spec + tasks + caps and get an explicit yes before the first dispatch. |
+| "It's one small task, goal-mode doesn't need the ceremony." | One task doesn't need goal-mode at all — dispatch it directly. If it's worth the loop, it's worth checkpoint 1. |
+| "The batch is green and the merge is trivial — I'll integrate and report." | Checkpoint 2 is about irreversibility, not size. Merges, pushes, and outward calls stop for approval however safe they look. |
+| "Nothing moved this round, but the next one will." | Two non-productive rounds is a stop condition, not a mood. Record the observable honestly and stop. |
+
 ## Rules
 
 - **Caps are hard:** `--max-iter` (default 5), `--budget` (tokens/$), `--lanes`

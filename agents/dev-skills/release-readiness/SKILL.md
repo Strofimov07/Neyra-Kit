@@ -60,9 +60,17 @@ Decide whether the change is actually ready to ship or only ready to merge.
   - unverified
   - accepted risk
   - follow-up debt
+- **Every follow-up gets a ticket before closure.** A `Follow-up:` line in a commit or
+  PR body, and any unresolved item in the issue's own acceptance / "remaining to close"
+  list, becomes its own tracker issue — or gets an explicit one-line "no ticket needed"
+  decision recorded on the issue. A follow-up living only in a merged commit message is
+  not tracked debt, it is lost debt: nobody re-reads merged commit bodies. Do not close
+  an issue that still carries open, unticketed acceptance items.
 
 **Success criteria**
 - Release confidence is explicit and defensible.
+- Every named follow-up exists as a ticket or a recorded no-ticket decision — not only
+  as prose in a commit, PR, or chat.
 
 ## Common rationalizations (and why they're invalid)
 
@@ -73,3 +81,5 @@ Decide whether the change is actually ready to ship or only ready to merge.
 | "It worked in code review." | Review is not the runtime. Exercise the real path once. |
 | "The generator/test passed." | Producer success does not prove the published artifact is the expected file or content. Validate the exact artifact consumed by publish/deploy. |
 | "No rollback needed." | Then state explicitly why the risk is acceptable — don't leave it unstated. |
+| "I noted the follow-up in the commit/PR body." | Merged commit bodies are write-only; nobody re-reads them. File the ticket now, or record an explicit no-ticket decision on the issue. |
+| "The remaining items are small, closing anyway." | The issue's own acceptance list is the closure contract. Ticket what's left, or leave it open. |
