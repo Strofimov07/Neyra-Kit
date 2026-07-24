@@ -111,6 +111,34 @@ def check_agents_table(root, dev_skills, agents_dir, is_consumer=False):
     return errs
 
 
+def check_readme_index(root, dev_skills):
+    """agents/dev-skills/README.md must list every dev-skill directory.
+
+    This is a plain directory index, not a curated subagent surface, so it gets no
+    consumer-mode relaxation. Nothing validated it before: the AGENTS table check has
+    an is_consumer escape hatch and this file had no check at all, so one consumer
+    drifted to 16 of 29 entries — and its AGENTS table listed a *different* 23 — with
+    neither index agreeing on what it omitted.
+    """
+    path = os.path.join(root, "agents/dev-skills/README.md")
+    if not os.path.isfile(path):
+        return ["agents/dev-skills/README.md not found"]
+    with open(path, encoding="utf-8") as fh:
+        text = fh.read()
+    listed = set(re.findall(r"^\|\s*\[([a-z0-9-]+)\]\(", text, re.M))
+    if not listed:
+        return ["agents/dev-skills/README.md has no skill table rows"]
+    errs = [
+        "agents/dev-skills/README.md is missing a row for '%s'" % s
+        for s in sorted(dev_skills - listed)
+    ]
+    errs += [
+        "agents/dev-skills/README.md lists '%s' but no such skill dir exists" % s
+        for s in sorted(listed - dev_skills)
+    ]
+    return errs
+
+
 def main():
     root = os.getcwd()
     skills_dir = os.path.join(root, "agents/dev-skills")
@@ -176,6 +204,9 @@ def main():
 
     # 4. mapping table must match reality (relaxed in a consumer).
     errs += check_agents_table(root, dev_skills, agents_dir, is_consumer)
+
+    # 5. README is a plain directory index — always checked, no consumer relaxation.
+    errs += check_readme_index(root, dev_skills)
 
     if errs:
         print("FAIL skill↔subagent mapping:")

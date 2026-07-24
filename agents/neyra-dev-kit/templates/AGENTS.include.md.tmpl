@@ -8,3 +8,15 @@ This repo uses the shared Neyra engineering skill stack. Auto-subagents live in 
 **Transparency — required in `/loop` and autonomous runs:** each turn, name the skill(s)/subagent(s) you used or assumed and why. Report subagent results faithfully (distinguish what was verified from what is still assumed). Skip a matrix-required check only with an explicit one-line reason in the same turn.
 
 **Post-implementation gate — before declaring a code slice done:** `code-reviewer` (reuse/scope) → matrix add-ons for the touched surface (`localization-checker` for copy, `contract-checker` for endpoints) → `verify-runtime` on the real surface (`{{BUILD_VERIFY_CMD}}`) → `release-readiness` + `regression-scout` for high-risk or cross-layer changes.
+
+## Self-Improvement Rule
+
+When work surfaces a repeatable mistake, a skipped gate, a gate that fired on a stale input, or a corrected assumption, close the loop via `kit-evolution` (`agents/dev-skills/kit-evolution/SKILL.md`): append one line to `agents/neyra-dev-kit/signals.log` in the same turn, then route it to a skill, an enforced check, a knowledge-graph node, or the list below.
+
+A signal that lives only in the conversation evaporates. Don't wait for a retro.
+
+## Current lessons
+
+Patterns promoted from `signals.log` after they recurred or proved costly. Keep each to a few lines — this section is read every session.
+
+<!-- kit-evolution appends here when signals.log shows a pattern promoted to a rule. -->

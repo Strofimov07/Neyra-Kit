@@ -26,3 +26,17 @@ of any end-user skill product catalog.
 | [pr-hygiene](pr-hygiene/SKILL.md) | Branch / commit / PR mechanics, scoped staging, no AI attribution |
 | [incident-runbook](incident-runbook/SKILL.md) | Diagnose & contain known prod incidents from encoded failure modes |
 | [knowledge-graph](knowledge-graph/SKILL.md) | Typed memory graph: nodes/edges, single-source, freshness, code→node bridge |
+| [test-first](test-first/SKILL.md) | RED to GREEN to refactor: a failing test before the change, for logic and bug fixes |
+| [systematic-debugging](systematic-debugging/SKILL.md) | Reproduce, root-cause, one hypothesis, then lock the fix with a failing test |
+| [migration-safety](migration-safety/SKILL.md) | Production safety for DB schema migrations: compatibility, locks, rollback |
+| [spec-elicitation](spec-elicitation/SKILL.md) | Turns a vague request into a developer-ready spec with EARS acceptance criteria |
+| [writing-plans](writing-plans/SKILL.md) | Granular, reviewable implementation plan artifact before any code |
+| [spec-review](spec-review/SKILL.md) | Conformance lane: the diff does what was specified and nothing unrequested |
+| [receiving-code-review](receiving-code-review/SKILL.md) | Disciplined consumption of review findings: verify each before acting |
+| [subagent-dispatch](subagent-dispatch/SKILL.md) | Compaction-proof ledger protocol for dispatching a multi-task plan |
+| [parallel-lanes](parallel-lanes/SKILL.md) | Isolated git worktree or branch per simultaneously-running agent |
+| [post-merge-watch](post-merge-watch/SKILL.md) | Watches CI/CD after a merge lands and surfaces failures in the same turn |
+| [pr-review-watch](pr-review-watch/SKILL.md) | Watches an open PR's review threads and CI, and routes what needs action |
+| [kit-evolution](kit-evolution/SKILL.md) | Turns session friction and corrections into a validated kit change |
+| [goal-mode](goal-mode/SKILL.md) | Opt-in autonomous goal orchestration: checkpointed, capped, human-gated |
+| [backlog-fleet](backlog-fleet/SKILL.md) | Existing backlog to approved parallel batches running in isolated lanes |

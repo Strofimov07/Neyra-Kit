@@ -4,6 +4,50 @@ This append-only log is authoritative from v0.27.0 onward. Historical decisions
 before the source cutover remain frozen in the legacy AI Browser checkout and
 are not an authoring surface.
 
+## 2026-07-25 — Five shipped kit defects found by a consumer audit (v0.30.0)
+
+**Context.** A full documentation and monetization audit in the Tea Farm consumer
+surfaced nine signals. Five were not consumer misconfiguration but defects in the
+shared kit itself, each shipped and silent:
+
+- the `doc-freshness` workflow template triggered on `paths: src/**`, a directory no
+  consumer has, so the only automated anti-staleness mechanism never fired anywhere;
+- `check_code_node.py` hardcoded `origin/main` as its diff base, silently degrading to
+  `HEAD~1` in any repo that integrates on `dev` or `master`;
+- `localization-guard/SKILL.md` hardcoded `For Browser, at least en and ru`, leaking one
+  product's name and locale scope into a shared skill;
+- `check-skill-mapping.py` never validated `agents/dev-skills/README.md` against the
+  directory, and the AGENTS-table check it does run has an `is_consumer` relaxation — so
+  index drift was invisible by design (this kit's own README was missing 14 of 31 rows);
+- `kit-evolution` cited a `Self-Improvement Rule` and a `Current lessons` section in the
+  consumer AGENTS include that the template never created, leaving the learning loop
+  with no landing zone.
+
+The common shape of the first four: a mechanism that fails open. Nothing raises, nothing
+warns, and absence of output is indistinguishable from a clean result.
+
+**Decision.** Fix all five at the source, and promote four cross-cutting lessons from the
+same audit into the skills that should have caught them:
+
+- `contract-safety` gains step 0 — verify a canonical registry against code before
+  trusting it as the list of what exists, because canon drifts silently on deletion;
+- `contract-safety` gains an enum-exhaustiveness rule — a dispatch branch that silently
+  no-ops is the highest-risk shape in a codebase;
+- `release-readiness` requires the smoke path to include the grant, not just the status
+  transition, for payment/reward/entitlement flows;
+- `knowledge-graph` makes `Drift` bidirectional: canon ahead of code is an unresolved
+  build-or-descope decision, not a stale doc, and needs the opposite response.
+
+The `linear-router` template additionally gains a duplicate check keyed on defect rather
+than title, with a required quoted root cause, after a title-similarity verdict nearly
+discarded three distinct defects. Its model moves from `haiku` to `sonnet`: comparing
+root causes is not tag routing.
+
+**Consequence.** Consumers must upgrade to pick these up; installed copies are generated
+state and are overwritten by `install.sh`. The widened workflow trigger makes the
+freshness job run on every PR — this is intentional, since the script itself reports
+`no mapped paths touched` and the step is non-blocking.
+
 ## 2026-07-18 — Standalone Neyra-Kit becomes the canonical source (v0.27.0)
 
 **Context.** A shared Codex hooks correction had to be authored in the AI Browser

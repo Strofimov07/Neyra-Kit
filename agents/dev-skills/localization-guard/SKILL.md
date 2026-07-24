@@ -34,7 +34,12 @@ Prevent user-facing changes from bypassing the app's localization system.
 ### 3. Check locale coverage
 
 - Verify minimum required locales for the surface.
-- For Browser, at least `en` and `ru` must remain aligned.
+- Use the consumer repo's configured minimum locale set (the rendered subagent / repo
+  config). A shared skill must not hardcode one product's scope — the number goes stale
+  and then under-scopes the gate everywhere it is installed.
+- Client and server locale sets are separate surfaces and can diverge. When a string has
+  a counterpart on the other side, check both: a translated client with untranslated
+  server copy is a defect that no single-surface check will catch.
 
 **Success criteria**
 - Required locales are updated consistently.

@@ -18,6 +18,20 @@ Catch breakage at system boundaries before a change is treated as shippable.
 
 ## Review pass
 
+### 0. Verify the canon itself before trusting it
+
+- If this review leans on a canonical registry or doc as the list of what currently
+  exists, do not take its claims at face value. Cross-check the concrete claims —
+  namespaces, endpoints, fields, enum members — against the actual code in the same pass.
+- A canon page is a snapshot a human wrote. It drifts silently on deletion, because
+  nothing un-lists itself. Code is truth for existence, exactly as it is for behavior.
+- A canon claim the code does not back up is **stale canon, not a lead to chase**. Flag
+  and fix it (or file the fix) in the same turn. Never investigate or design against
+  something that is not in the code.
+
+**Success criteria**
+- Every concrete existence claim taken from a canon doc was checked against code.
+
 ### 1. Identify the contract boundary
 
 - Name the caller, callee, payload shape, side effects, and failure surfaces.
@@ -31,6 +45,12 @@ Catch breakage at system boundaries before a change is treated as shippable.
 - Verify request/response shape, field semantics, default values, and status behavior.
 - Check for schema drift, renamed meanings, or silent removals.
 - For analytics, verify payload shape and downstream expectations.
+- For dispatch logic keyed on an enum or type field (order type, event type, webhook
+  type), verify **every member has a handled branch**. A member that silently no-ops —
+  no exception, no warning, no log — is the highest-risk shape there is: nothing signals
+  the gap, so it ships and stays broken until someone notices a business outcome is
+  missing. Seen in production: a payment fulfiller handled three of five order types;
+  the other two marked the order paid, counted the revenue, and granted nothing.
 
 **Success criteria**
 - Compatibility risk is understood and either preserved or intentionally versioned.
