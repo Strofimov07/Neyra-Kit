@@ -34,9 +34,10 @@ Prove that the shipped change works on the real surface, not only in static anal
 - Start with targeted tests or build/lint checks that should fail fast.
 - Fix deterministic failures before broadening verification.
 - If the change alters a signature or contract that other tests fake/mock (`fake_<fn>`,
-  monkeypatched helpers, stub clients), `grep -rl` for every mock of it and widen to the
-  full suite before pushing — a targeted run stays green while a sibling mock drifts out
-  of sync with the real signature, and CI catches it only after merge.
+  monkeypatched helpers, stub clients), grep the changed symbol across the test tree
+  (`grep -rn '<symbol>' <tests-dir>`), run every file it returns, then the suite for the
+  touched package — a targeted run stays green while a sibling mock drifts out of sync
+  with the real signature, and CI catches it only after merge.
 
 **Success criteria**
 - Basic breakage is ruled out before runtime validation.
@@ -46,6 +47,10 @@ Prove that the shipped change works on the real surface, not only in static anal
 - For web UI, exercise the affected path in a real browser flow and name the path explicitly.
 - For backend changes, hit the changed endpoint, job, or contract boundary.
 - For multi-layer work, verify the seam where the change could actually break.
+- For tests backed by real infrastructure (Redis, Postgres, a queue), run against the
+  same backend CI uses or against an explicit fresh mock — and state which. Local
+  fallbacks (in-memory limiter, in-memory store) hide what only the real backend shows:
+  state surviving between tests, FK constraints.
 
 **Success criteria**
 - The changed behavior is observed on a real surface or contract boundary.
@@ -77,8 +82,6 @@ Prove that the shipped change works on the real surface, not only in static anal
 ## Rules
 
 - Do not treat mocked/component-only checks as sufficient for user-facing web UI final verification.
-- Tests backed by real infrastructure (Redis, Postgres, a queue) are not proven by a green
-  local run: local fallbacks (in-memory limiter, in-memory store) hide behavior that appears
-  only against the backend CI uses — state surviving between tests, FK constraints. Either
-  run against the same backend as CI or use an explicit fresh mock, and state which one.
+- A green local run of an infra-backed test is not proof: match CI's backend or use an
+  explicit fresh mock, and say which.
 - If the platform lacks a reliable success signal, verify the nearest observable proxy and name the blind spot.

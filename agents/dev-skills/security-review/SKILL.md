@@ -40,6 +40,9 @@ have a plausible path from attacker-controlled input to impact.
   action confirmed, visible, auditable? Defer UX-trust findings there.
 - **`contract-safety`** — the caller's view: compatibility, idempotency,
   observability. Defer boundary-compat findings there.
+- **`regression-scout`** — the neighbor's view: what the change might have broken.
+  An unmigrated consumer of a hardened primitive stays here, not there: it is a live
+  bypass of a control, not a functional regression.
   If a finding fits a neighbor better, route it there instead of double-reporting.
 
 ## Review pass
@@ -93,9 +96,10 @@ Check the diff for each, using the technologies present in the target repo:
   overly broad CORS (`*` with credentials), missing `postMessage` origin check.
 - **Unmigrated consumers of a hardened primitive** — the diff adds a new trusted
   primitive for an existing vector (a spoof-resistant client-IP extractor, a signature
-  check, a canonical normalizer) but leaves existing consumers on the old one. Grep every
-  caller of the old primitive: one left behind keeps the bypassable path alive and makes
-  the new mechanism read as protection it does not provide.
+  check, a canonical normalizer) but leaves existing consumers on the old one. One left
+  behind keeps the bypassable path alive and makes the new mechanism read as protection
+  it does not provide. Grep the **old primitive's identifier only** — this is the single
+  lookup allowed to leave the diff.
 
 **Success criteria** — each applicable category is checked and marked
 present/absent, not skipped.

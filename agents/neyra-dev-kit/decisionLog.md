@@ -117,12 +117,17 @@ primitive), `release-readiness` (no unticketed follow-ups), `parallel-lanes` (wo
 check before destructive git; verify the checkout actually landed) — each with a
 matching anti-rationalization row and a synchronized portable subagent wrapper. Fix two
 defects found in the same pass: `kit-evolution`'s step-1 anchor pointed at an "AGENTS.md
-Current lessons" section that exists in no consumer, and `goal-mode` was the only gate
-skill with no anti-rationalization block.
+Current lessons" section that exists in no consumer (the skill and its portable wrapper
+both carried it), and `goal-mode` — the highest-risk of the 12 dev-skills still missing
+an anti-rationalization block, since skipping its checkpoints is what the block exists
+to prevent — got one.
 
 **Consequence.** Rules sit where the agent already reads them at the moment of the
 action rather than in a changelog nobody re-reads while deciding. Product-specific facts
 from the same pass (pre-commit formatter behavior, which backends that repo's CI runs)
 stayed in the consumer's `AGENTS.md`, per the settings-owns-facts boundary. `goal-mode`'s
 hook-level enforcement stays open — the hooks have no goal-mode awareness at all — and is
-tracked as its own task instead of being claimed here.
+tracked as NEB-1589 instead of being claimed here; anti-rationalization blocks for the
+remaining 11 skills are a separate sweep. This batch's own review found the first cut of
+these rules had landed the `kit-evolution` fix in the skill but not its wrapper, so the
+defect would have survived the release that claimed it.

@@ -60,17 +60,23 @@ Decide whether the change is actually ready to ship or only ready to merge.
   - unverified
   - accepted risk
   - follow-up debt
-- **Every follow-up gets a ticket before closure.** A `Follow-up:` line in a commit or
-  PR body, and any unresolved item in the issue's own acceptance / "remaining to close"
-  list, becomes its own tracker issue — or gets an explicit one-line "no ticket needed"
-  decision recorded on the issue. A follow-up living only in a merged commit message is
-  not tracked debt, it is lost debt: nobody re-reads merged commit bodies. Do not close
-  an issue that still carries open, unticketed acceptance items.
-
 **Success criteria**
 - Release confidence is explicit and defensible.
-- Every named follow-up exists as a ticket or a recorded no-ticket decision — not only
-  as prose in a commit, PR, or chat.
+
+### 6. Close the follow-up loop
+
+- Every follow-up gets a ticket **before** closure: a `Follow-up:` line in a commit or
+  PR body, and any unresolved item in the issue's own acceptance / "remaining to close"
+  list, becomes its own tracker issue. A follow-up living only in a merged commit message
+  is not tracked debt, it is lost debt — nobody re-reads merged commit bodies.
+- The only alternative is an explicit "no ticket needed" decision recorded on the issue
+  **and naming who accepted the debt**. An agent-authored "not needed" with no named
+  owner does not count.
+- Never move an issue to done while it still carries open, unticketed acceptance items.
+
+**Success criteria**
+- Every named follow-up exists as a ticket, or as a recorded no-ticket decision with an
+  owner — not only as prose in a commit, PR, or chat.
 
 ## Common rationalizations (and why they're invalid)
 

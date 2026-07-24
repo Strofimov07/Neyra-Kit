@@ -33,9 +33,10 @@ Each parallel agent gets, up front:
 - **One Linear ticket** (`NEB-XXXX`) — never shared across lanes.
 - **One branch** — `feature/<NEB-XXXX>-<slug>`, from an agreed base (record it:
   `git rev-parse HEAD`).
-- **One git worktree** (strongly preferred) — `git worktree add
-  ../wt-NEB-XXXX feature/NEB-XXXX-slug`. Each worktree has its own working tree
-  and index, so the agents never share either.
+- **One git worktree** (strongly preferred) — `git worktree list` first to confirm
+  the branch is not already held elsewhere, then `git worktree add ../wt-NEB-XXXX
+  feature/NEB-XXXX-slug`. Each worktree has its own working tree and index, so the
+  agents never share either.
 
 If worktrees aren't possible, fall back to branch-per-lane in one tree — but then
 the hard rules in step 2 are the *only* protection, not belt-and-suspenders.
@@ -59,12 +60,11 @@ Not guidelines. Violating any one can silently corrupt a sibling's work.
   run; that is the integration step.
 - **Files in the tree that aren't yours: leave them.** Don't move, delete, or
   stage them. If they block you, report BLOCKED to the orchestrator.
-- **Verify a checkout landed before anything destructive.** Run `git worktree list`
-  first: a branch already checked out in *any* other worktree — a sibling agent's or
-  the user's own — makes `git checkout` exit non-zero. If the next command doesn't
-  check that exit code, it runs against the branch you were already on. After any
-  checkout, confirm `git branch --show-current` equals the target before `reset
-  --hard`, `rebase`, or a commit.
+- **Checkout only inside your own worktree — and read the result.** Never chain a
+  checkout with `;`. Run `git checkout <branch> && git branch --show-current` and
+  read the branch it prints: a branch held by another worktree (a sibling's or the
+  user's own) exits 128 and leaves HEAD exactly where it was, so an unchecked
+  `reset --hard`, `rebase`, or commit lands on your previous branch.
 
 **Success criteria**
 - No agent touched a file, branch, stash, or index entry outside its own lane.
@@ -141,8 +141,8 @@ When a lane is ready:
 - One ticket + one branch + one worktree per parallel agent. No exceptions.
 - Never `git add -A` in a parallel run, even in a dedicated worktree.
 - Never switch branches or run destructive git in a tree a sibling is using.
-- `git worktree list` before a checkout/reset/rebase; confirm `git branch
-  --show-current` after the checkout and before anything destructive.
+- Read a checkout's result (`git checkout <b> && git branch --show-current`) before
+  any destructive git — a blocked checkout exits 128 and leaves HEAD where it was.
 - Integration (merge + verify-runtime + regression-scout) is a named phase, not
   optional.
 - Kit VERSION bumps in the one lane that owns the kit change; never in two.
