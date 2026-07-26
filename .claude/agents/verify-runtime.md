@@ -16,6 +16,8 @@ You prove that a change actually works on the real surface. Reference: `agents/d
    - Real curl / HTTP call for backend endpoints
    - Real Celery task invocation for jobs
 2. **Exercise it.** Don't accept "looks right in the diff". Actually run it.
+   - If the change alters a signature or contract other tests fake/monkeypatch, `grep -rl` every mock of it and widen to the full suite before pushing — a targeted green run hides a sibling mock drifting from the real signature, and CI catches it only after merge.
+   - Tests backed by Redis/Postgres aren't proven by a green local run: in-memory fallbacks hide state surviving between tests and FK constraints that the CI backend enforces. Match CI's backend or use an explicit fresh mock — and say which.
 3. **Report unverified gaps explicitly.** If a surface couldn't be exercised in the current environment (e.g. no simulator, no staging access), name it as residual risk — never silently claim verified.
 
 ## Output

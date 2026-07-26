@@ -33,9 +33,10 @@ Each parallel agent gets, up front:
 - **One Linear ticket** (`NEB-XXXX`) — never shared across lanes.
 - **One branch** — `feature/<NEB-XXXX>-<slug>`, from an agreed base (record it:
   `git rev-parse HEAD`).
-- **One git worktree** (strongly preferred) — `git worktree add
-  ../wt-NEB-XXXX feature/NEB-XXXX-slug`. Each worktree has its own working tree
-  and index, so the agents never share either.
+- **One git worktree** (strongly preferred) — `git worktree list` first to confirm
+  the branch is not already held elsewhere, then `git worktree add ../wt-NEB-XXXX
+  feature/NEB-XXXX-slug`. Each worktree has its own working tree and index, so the
+  agents never share either.
 
 If worktrees aren't possible, fall back to branch-per-lane in one tree — but then
 the hard rules in step 2 are the *only* protection, not belt-and-suspenders.
@@ -59,6 +60,11 @@ Not guidelines. Violating any one can silently corrupt a sibling's work.
   run; that is the integration step.
 - **Files in the tree that aren't yours: leave them.** Don't move, delete, or
   stage them. If they block you, report BLOCKED to the orchestrator.
+- **Checkout only inside your own worktree — and read the result.** Never chain a
+  checkout with `;`. Run `git checkout <branch> && git branch --show-current` and
+  read the branch it prints: a branch held by another worktree (a sibling's or the
+  user's own) exits 128 and leaves HEAD exactly where it was, so an unchecked
+  `reset --hard`, `rebase`, or commit lands on your previous branch.
 
 **Success criteria**
 - No agent touched a file, branch, stash, or index entry outside its own lane.
@@ -123,6 +129,9 @@ When a lane is ready:
   fragile; you will not reliably restore them.
 - "Same user's agents, so it's fine." Same machine, same dirty tree — the
   collision mechanics are identical to a two-developer shared checkout.
+- "The checkout ran, so I'm on the right branch." Only if you read its exit code.
+  A checkout blocked by another worktree leaves you exactly where you were — commits
+  then land on the wrong branch until someone notices.
 - "The overlap I just discovered is small — I'll handle it in my lane." The
   independence assumption was the dispatch's approval basis; it expired the
   moment you found the overlap. Report BLOCKED and let the batch re-approve.
@@ -132,6 +141,8 @@ When a lane is ready:
 - One ticket + one branch + one worktree per parallel agent. No exceptions.
 - Never `git add -A` in a parallel run, even in a dedicated worktree.
 - Never switch branches or run destructive git in a tree a sibling is using.
+- Read a checkout's result (`git checkout <b> && git branch --show-current`) before
+  any destructive git — a blocked checkout exits 128 and leaves HEAD where it was.
 - Integration (merge + verify-runtime + regression-scout) is a named phase, not
   optional.
 - Kit VERSION bumps in the one lane that owns the kit change; never in two.

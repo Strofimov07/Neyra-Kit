@@ -33,6 +33,11 @@ Prove that the shipped change works on the real surface, not only in static anal
 
 - Start with targeted tests or build/lint checks that should fail fast.
 - Fix deterministic failures before broadening verification.
+- If the change alters a signature or contract that other tests fake/mock (`fake_<fn>`,
+  monkeypatched helpers, stub clients), grep the changed symbol across the test tree
+  (`grep -rn '<symbol>' <tests-dir>`), run every file it returns, then the suite for the
+  touched package — a targeted run stays green while a sibling mock drifts out of sync
+  with the real signature, and CI catches it only after merge.
 
 **Success criteria**
 - Basic breakage is ruled out before runtime validation.
@@ -42,6 +47,10 @@ Prove that the shipped change works on the real surface, not only in static anal
 - For web UI, exercise the affected path in a real browser flow and name the path explicitly.
 - For backend changes, hit the changed endpoint, job, or contract boundary.
 - For multi-layer work, verify the seam where the change could actually break.
+- For tests backed by real infrastructure (Redis, Postgres, a queue), run against the
+  same backend CI uses or against an explicit fresh mock — and state which. Local
+  fallbacks (in-memory limiter, in-memory store) hide what only the real backend shows:
+  state surviving between tests, FK constraints.
 
 **Success criteria**
 - The changed behavior is observed on a real surface or contract boundary.
@@ -67,8 +76,12 @@ Prove that the shipped change works on the real surface, not only in static anal
 | "It's obviously correct." | "Obvious" changes are exactly the ones that ship broken. Verify anyway. |
 | "There's no runtime/staging here." | Then verify the nearest observable proxy and name the blind spot — don't claim verified. |
 | "I'll verify after merge." | After merge it's a production incident, not a check. Verify before closing. |
+| "The targeted tests I ran are green." | Targeted scope proves the lines you touched, not the mocks and callers still assuming the old shape. Widen before pushing. |
+| "It's green locally, CI will match." | Local fallbacks (in-memory store/limiter) are not the CI backend. Same backend or an explicit fresh mock — otherwise CI is your first real run. |
 
 ## Rules
 
 - Do not treat mocked/component-only checks as sufficient for user-facing web UI final verification.
+- A green local run of an infra-backed test is not proof: match CI's backend or use an
+  explicit fresh mock, and say which.
 - If the platform lacks a reliable success signal, verify the nearest observable proxy and name the blind spot.

@@ -40,6 +40,9 @@ have a plausible path from attacker-controlled input to impact.
   action confirmed, visible, auditable? Defer UX-trust findings there.
 - **`contract-safety`** — the caller's view: compatibility, idempotency,
   observability. Defer boundary-compat findings there.
+- **`regression-scout`** — the neighbor's view: what the change might have broken.
+  An unmigrated consumer of a hardened primitive stays here, not there: it is a live
+  bypass of a control, not a functional regression.
   If a finding fits a neighbor better, route it there instead of double-reporting.
 
 ## Review pass
@@ -91,6 +94,12 @@ Check the diff for each, using the technologies present in the target repo:
 - **Path traversal** — file path built from input without normalization/containment.
 - **Auth/session** — token in URL, missing expiry/rotation, TOCTOU on auth checks,
   overly broad CORS (`*` with credentials), missing `postMessage` origin check.
+- **Unmigrated consumers of a hardened primitive** — the diff adds a new trusted
+  primitive for an existing vector (a spoof-resistant client-IP extractor, a signature
+  check, a canonical normalizer) but leaves existing consumers on the old one. One left
+  behind keeps the bypassable path alive and makes the new mechanism read as protection
+  it does not provide. Grep the **old primitive's identifier only** — this is the single
+  lookup allowed to leave the diff.
 
 **Success criteria** — each applicable category is checked and marked
 present/absent, not skipped.
@@ -134,6 +143,7 @@ radius / hard preconditions. Rank output most-severe first.
 | "It's a tiny diff, no security code changed." | One added line can be the whole injection. A new sink on an old tainted path is new exposure. Review it. |
 | "We'll do a security pass before launch." | This diff ships now. Review now, not against a launch that may never get a pass. |
 | "It's probably fine / low risk." | "Probably" isn't a taint analysis. Either trace the path and refute it, or report it. |
+| "The new hardened helper is in, so that vector's closed." | Only for callers actually moved onto it. Grep the old primitive's consumers — one left behind keeps the bypass alive. |
 
 ## Output
 

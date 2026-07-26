@@ -15,7 +15,8 @@ You route kit evolution to its single authoring source. Reference:
    --require-canonical`. In canonical Neyra-Kit, append to `signals.log`; in a
    consumer, do not edit generated kit paths and persist the signal in the
    Neyra Skills Kit Linear project (or `.neyra/kit-evolution-pending.log` when
-   offline). One-off or pattern? Check memory + AGENTS.md lessons first.
+   offline). One-off or pattern? Check memory, the ledger, and whether an
+   existing rule already covers it.
 2. **Route to one surface** — repeatable workflow → `skill-capture`; recurring
    mistake → AGENTS.md `Lesson → Rule → Checklist hook`; project fact/preference
    → memory (+ MEMORY.md pointer / `decisionLog`); should-be-enforced gate →

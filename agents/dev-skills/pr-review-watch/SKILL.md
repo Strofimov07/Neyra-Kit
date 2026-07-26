@@ -41,6 +41,13 @@ silently. This skill is the active half between `pr-hygiene` (opens the PR) and
   window expires (default 5 min; state it).
 - Each new push re-triggers a fresh pass — watch after the push that matters,
   not a stale earlier one.
+- A run reporting `skipping` — usage limit reached, quota exhausted, reviewer
+  disabled — is **not** a completed review, and neither is a `NEUTRAL` check
+  conclusion. State that the automated control is absent for this PR: the kit
+  gate (`code-reviewer` + the surface's matrix add-ons) is now the only review
+  this PR will get, so re-run it against the final diff rather than relying on a
+  pass from an earlier revision. A skipped reviewer read as "no findings"
+  silently removes the entire automated control.
 
   ```bash
   # Did Bugbot run, and how many issues? (summary review — author login `cursor`)
@@ -90,11 +97,14 @@ silently. This skill is the active half between `pr-hygiene` (opens the PR) and
 | "PR's open, no comments — clean, merge it." | Bugbot is async; empty may mean *not reviewed yet*. Confirm the summary review exists (step 2) before calling it clean. |
 | "Queried the comments, got nothing." | You likely selected `cursor`, not `cursor[bot]` — inline findings use the bot login. Re-query (step 3). |
 | "It's probably a false positive, merge past it." | Probably ≠ verified. A real High merged is a prod bug. Run it through receiving-code-review first. |
+| "Bugbot says skipping (or the check is NEUTRAL) — nothing to look at." | It never ran. Say the automated control is absent for this PR, and re-run the kit gate against the final diff — it is now the only review this PR gets. |
 
 ## Rules
 
 - Read-only on the PR — never auto-apply a fix, dismiss a finding, or merge.
 - Bounded, stated window; "not reviewed yet" is never reported as "clean".
+- `skipping` / usage-limited / disabled / `NEUTRAL` ≠ reviewed: name the automated
+  control absent for that PR and re-run the kit gate against the final diff.
 - Two logins: summary = `cursor`, inline findings = `cursor[bot]`.
 - Every High-severity finding gets a receiving-code-review verdict before merge.
 
