@@ -125,7 +125,9 @@ def check_readme_index(root, dev_skills):
         return ["agents/dev-skills/README.md not found"]
     with open(path, encoding="utf-8") as fh:
         text = fh.read()
-    listed = set(re.findall(r"^\|\s*\[([a-z0-9-]+)\]\(", text, re.M))
+    # Key off the link target (the skill dir), not the display text: the path is the
+    # real identity, and a mislabeled link text would otherwise false-flag drift.
+    listed = set(re.findall(r"^\|\s*\[[^\]]+\]\(([a-z0-9-]+)/SKILL\.md\)", text, re.M))
     if not listed:
         return ["agents/dev-skills/README.md has no skill table rows"]
     errs = [

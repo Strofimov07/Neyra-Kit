@@ -27,17 +27,29 @@ MAP = os.path.join(os.path.dirname(__file__), "knowledge-map.yml")
 def default_base():
     """Merge-base с интеграционной веткой репозитория.
 
-    Пробует настроенную ветку, затем распространённые имена. Раньше здесь было
+    Порядок: явный KNOWLEDGE_DIFF_BASE → реальная default-ветка репозитория
+    (origin/HEAD, если настроена) → распространённые имена. Раньше здесь было
     жёстко зашито `origin/main`: в репозитории, интегрирующемся на `dev` (или
     `master`), команда падала, скрипт молча откатывался на `HEAD~1` и показывал
     файлы одного последнего коммита вместо всей ветки — недооценивая дрейф.
 
-    Переопределяется переменной окружения KNOWLEDGE_DIFF_BASE.
+    Определение через origin/HEAD снимает угадывание там, где оно настроено; список
+    имён — best-effort fallback. Переопределяется переменной KNOWLEDGE_DIFF_BASE.
     """
     candidates = []
     env_base = os.environ.get("KNOWLEDGE_DIFF_BASE")
     if env_base:
         candidates.append(env_base)
+    try:
+        head = subprocess.check_output(
+            ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        if head:
+            candidates.append(head)
+    except subprocess.CalledProcessError:
+        pass
     candidates += [
         "origin/main",
         "main",
