@@ -104,7 +104,13 @@ insurance, not the mechanism.
   status / date / owner), not a checklist line. A risk is severity × likelihood +
   owner + status, not a bullet.
 - Stable anchors over line numbers; relations over prose mentions.
-- `Drift` (code ahead of canon) is a first-class state — flag it, don't hide it.
+- `Drift` is a first-class state in **either direction** — flag it, don't hide it.
+  Code-ahead-of-canon (shipped, doc not updated) and canon-ahead-of-code (designed,
+  never built) need opposite responses. The first is fixed by updating the doc. The
+  second is not a doc-staleness bug at all — it is an unresolved build-or-descope
+  decision, and marking the doc as an unimplemented proposal is the honest interim
+  state, not a fix. Say which direction a `Drift` node is in its notes; the bare word
+  does not distinguish them, and the two mislead in opposite ways.
 - This skill governs structure and freshness; it does not invent product facts —
   unknowns get an explicit `open question`, not a guess.
 - Writes to the external canon (Notion/wiki) are outward-facing — propose first,

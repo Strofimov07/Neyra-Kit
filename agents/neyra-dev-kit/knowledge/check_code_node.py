@@ -7,7 +7,7 @@
 не закрыто, пока затронутые узлы не обновлены или явно не подтверждены).
 
 Использование:
-  python3 docs/knowledge/check_code_node.py                 # diff vs merge-base origin/main (fallback HEAD~1)
+  python3 docs/knowledge/check_code_node.py                 # diff vs merge-base с интеграционной веткой (см. default_base())
   python3 docs/knowledge/check_code_node.py <base_ref>      # diff vs указанный ref
   python3 docs/knowledge/check_code_node.py --staged        # только staged-файлы
   --strict  → exit 1, если есть затронутые узлы (для гейта/CI)
@@ -24,16 +24,57 @@ import sys
 MAP = os.path.join(os.path.dirname(__file__), "knowledge-map.yml")
 
 
+def default_base():
+    """Merge-base с интеграционной веткой репозитория.
+
+    Порядок: явный KNOWLEDGE_DIFF_BASE → реальная default-ветка репозитория
+    (origin/HEAD, если настроена) → распространённые имена. Раньше здесь было
+    жёстко зашито `origin/main`: в репозитории, интегрирующемся на `dev` (или
+    `master`), команда падала, скрипт молча откатывался на `HEAD~1` и показывал
+    файлы одного последнего коммита вместо всей ветки — недооценивая дрейф.
+
+    Определение через origin/HEAD снимает угадывание там, где оно настроено; список
+    имён — best-effort fallback. Переопределяется переменной KNOWLEDGE_DIFF_BASE.
+    """
+    candidates = []
+    env_base = os.environ.get("KNOWLEDGE_DIFF_BASE")
+    if env_base:
+        candidates.append(env_base)
+    try:
+        head = subprocess.check_output(
+            ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        if head:
+            candidates.append(head)
+    except subprocess.CalledProcessError:
+        pass
+    candidates += [
+        "origin/main",
+        "main",
+        "origin/dev",
+        "dev",
+        "origin/master",
+        "master",
+    ]
+    for ref in candidates:
+        try:
+            return subprocess.check_output(
+                ["git", "merge-base", "HEAD", ref], text=True, stderr=subprocess.DEVNULL
+            ).strip()
+        except subprocess.CalledProcessError:
+            continue
+    return "HEAD~1"
+
+
 def changed_files(args):
     if "--staged" in args:
         cmd = ["git", "diff", "--name-only", "--cached"]
     else:
         base = next((a for a in args if not a.startswith("-")), None)
         if not base:
-            try:
-                base = subprocess.check_output(["git", "merge-base", "HEAD", "origin/main"], text=True).strip()
-            except subprocess.CalledProcessError:
-                base = "HEAD~1"
+            base = default_base()
         cmd = ["git", "diff", "--name-only", base]
     try:
         out = subprocess.check_output(cmd, text=True)
@@ -60,7 +101,9 @@ def parse_map(path):
         m = re.search(rf"{label}:\s*\[(.*?)\]", blk, re.DOTALL)
         if not m:
             return []
-        return [x.strip().strip('"').strip("'") for x in m.group(1).split(",") if x.strip()]
+        return [
+            x.strip().strip('"').strip("'") for x in m.group(1).split(",") if x.strip()
+        ]
 
     for e in entries:
         blk = "paths:" + e
@@ -89,7 +132,9 @@ def main():
     if not hits:
         print("  no mapped paths touched — no canon node update required by manifest.")
         return 0
-    print("  ⚠ mapped paths touched — update these canon nodes (and bump Last-verified):")
+    print(
+        "  ⚠ mapped paths touched — update these canon nodes (and bump Last-verified):"
+    )
     seen = set()
     for f, nodes, also in hits:
         extra = f" (+also: {', '.join(also)})" if also else ""

@@ -20,6 +20,10 @@ Decide whether the change is actually ready to ship or only ready to merge.
 
 - Name and run the primary smoke path for the changed behavior.
 - Prefer one real high-signal path over broad but shallow “looks fine” claims.
+- For payment, reward, or entitlement flows the smoke path must include **the grant**,
+  not just the status transition. A paid order with no fulfillment branch looks identical
+  to a successful purchase on every status signal — order marked paid, revenue counted,
+  purchase event emitted — while granting the user nothing.
 
 **Success criteria**
 - The critical path was exercised and named explicitly.
