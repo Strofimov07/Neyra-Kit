@@ -329,3 +329,24 @@ exit code. The config is unchanged — it is correct; "present" now means "verif
 
 **Consequence.** The Cursor guard can no longer regress to a silent no-op behind a green
 doctor. Full-run only (behavioural), so the Stop gate stays `--fast`.
+
+## 2026-07-29 — dead cross-file anchor lint + drop stale version stamp (v0.34.2)
+
+**Context.** NEB-1591, two silent-drift classes no validator caught. (1) `kit-evolution`
+routed "a recurring mistake or missing rule" to `` AGENTS.md `Lesson → Rule → Checklist
+hook` `` — a heading present in neither the shipped governance template nor the canonical
+`AGENTS.md`, so the route silently no-opped. (2) `.neyra-dev-kit.version` sat in the
+canonical repo root at `0.27.0` (VERSION was well ahead) — monorepo-sync residue that
+`EVOLVING-THE-KIT.md` §8 says canon must never carry; only `session-start.sh:57` reads it,
+and only as a boolean "installed" marker, never the value.
+
+**Decision.** Reformulate the `kit-evolution` route to `` AGENTS.md `Current lessons` ``
+(which the template has, promoted via the `Self-Improvement Rule`). Delete
+`.neyra-dev-kit.version` from canon (session-start's `[ -f ]` guard handles absence). Add
+`check-cross-refs.py`: a dev-skill reference to a backticked AGENTS.md section that is not
+a heading in the shipped governance fails in canon and warns in a consumer — wired into
+the full `doctor.sh` run with a regression test, and copied to consumers by `install.sh`.
+
+**Consequence.** A fresh consumer's `kit-evolution` routing targets all exist, and a future
+dead anchor fails `doctor` instead of silently no-opping. The third unvalidated version
+copy is gone. Full-run only; the Stop gate stays `--fast`.
