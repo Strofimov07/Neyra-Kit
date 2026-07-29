@@ -398,3 +398,26 @@ governance's own literal footer, which had drifted (product 0.4.0, growth 0.28.0
 the reviewer test still fail-closes for dev/canonical, and the four governance footers can
 no longer drift. `test-check-skill-mapping.py` gains regressions for the non-dev-N/A and
 no-layer-fail paths.
+
+## 2026-07-30 — installer retires stale kit-managed files on upgrade (v0.34.5)
+
+**Context.** NEB-1487: upgrading a long-lived consumer left files the current installer no
+longer writes (the signal: stale `agents/neyra-dev-kit/AGENTS.devkit.md` and
+`templates/codex/hooks.json` from a v0.26.1 layout), which then tripped the newer
+doctor/version/Codex checks until removed by hand. Copy/sync covered current files but had
+no retirement pass.
+
+**Decision.** `install.sh` records a manifest (`.neyra/kit-manifest.tsv`) of the files it
+manages under `agents/neyra-dev-kit/` — the fully kit-owned tooling tree — with sha256. On
+the next install it prunes any manifest path the new managed set no longer includes, **only
+when the file's checksum still matches the recorded one** (an unmodified kit file); a file
+changed since install is kept and reported, never deleted (RET-2). `--dry-run` lists without
+changing (RET-3); only manifest paths are ever considered (RET-5). The managed set is
+derived from the SOURCE via a single `NK_TOOL_FILES` list shared with the copy loop, so the
+two can't drift and stale files can't masquerade as current.
+
+**Consequence.** An upgraded consumer no longer accumulates orphaned kit files. Scope is the
+kit's own `agents/neyra-dev-kit/` tree (where the drift occurs and no user files live); the
+skill/agent mirrors already self-prune via `rsync --delete`, and single files (governance,
+hooks configs) are overwritten each install. `test-retire.py` installs into a temp repo and
+asserts RET-1/2/3/5; canonical-only in `doctor.sh`.

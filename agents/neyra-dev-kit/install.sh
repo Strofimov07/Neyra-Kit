@@ -119,6 +119,67 @@ write() { # write <dest> <<<content (stdin)
   if [[ $DRY -eq 1 ]]; then say "[dry] write $1"; cat > /dev/null; else mkdir -p "$(dirname "$1")"; cat > "$1"; fi
 }
 
+# The explicit set of kit tooling files copied into a consumer's agents/neyra-dev-kit/.
+# Single source of truth: used BOTH by the copy loop and the retirement manifest, so the
+# two can never drift — a mismatch could delete a real kit file. Add new tooling here.
+NK_TOOL_FILES="KIT_BOOTSTRAP.md doctor.sh source-policy.py lint-skills.py check-skill-mapping.py test-check-skill-mapping.py test-portable-reviewers.py check-egress.py lint-scope.py test-lint-scope.py test-gate-resolution.py check-cross-refs.py test-cross-refs.py check-external-leaks.py test-external-leaks.py lint-plans.py validate-codex-hooks.py VERSION"
+
+# --- kit-managed file manifest + retirement (NEB-1487) --------------------------
+# sha256 of a file, portable (Linux sha256sum / macOS shasum). Empty on any failure.
+nk_sha() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" 2>/dev/null | awk '{print $1}'
+  else shasum -a 256 "$1" 2>/dev/null | awk '{print $1}'; fi
+}
+
+# The consumer-relative paths under agents/neyra-dev-kit/ that THIS install writes,
+# derived from the SOURCE so it mirrors the copy block exactly (independent of whatever
+# stale files sit on the consumer's disk). Newline-delimited on stdout.
+nk_managed_paths() {
+  local base="agents/neyra-dev-kit" f
+  for f in "$KIT_DIR"/hooks/*.sh;     do [[ -f "$f" ]] && printf '%s\n' "$base/hooks/$(basename "$f")"; done
+  for f in "$KIT_DIR"/hooks/lib/*.sh; do [[ -f "$f" ]] && printf '%s\n' "$base/hooks/lib/$(basename "$f")"; done
+  for f in $NK_TOOL_FILES; do
+    [[ -f "$KIT_DIR/$f" ]] && printf '%s\n' "$base/$f"
+  done
+  if [[ -d "$KIT_DIR/orchestration" ]]; then for f in "$KIT_DIR"/orchestration/*; do [[ -f "$f" ]] && printf '%s\n' "$base/orchestration/$(basename "$f")"; done; fi
+}
+
+# Prune consumer files the current kit no longer manages under agents/neyra-dev-kit/,
+# then record the manifest of what it does manage. A stale file is removed only when its
+# checksum matches the recorded one (an unmodified kit file); a file changed since the
+# last install is KEPT and reported (never delete user-edited content). Only paths in the
+# recorded manifest are ever considered (RET-1..5).
+retire_managed_artifacts() {
+  local mf="$TARGET/.neyra/kit-manifest.tsv"
+  local intended; intended="$(nk_managed_paths)"
+  if [[ -f "$mf" ]]; then
+    local sha rel cur
+    while IFS=$'\t' read -r sha rel; do
+      [[ -n "$rel" ]] || continue
+      if printf '%s\n' "$intended" | grep -qxF -- "$rel"; then continue; fi   # still managed
+      [[ -e "$TARGET/$rel" ]] || continue                                      # already gone
+      cur="$(nk_sha "$TARGET/$rel" || true)"
+      if [[ -n "$sha" && "$cur" == "$sha" ]]; then
+        if [[ $DRY -eq 1 ]]; then say "[dry] retire stale kit file: $rel"
+        elif rm -f "$TARGET/$rel"; then say "retired stale kit file: $rel"
+        else say "WARN: could not remove $rel"; fi
+      else
+        say "WARN: kept $rel — changed since last install (checksum differs); remove by hand if intended"
+      fi
+    done < "$mf"
+  fi
+  if [[ $DRY -eq 0 ]]; then
+    mkdir -p "$TARGET/.neyra" 2>/dev/null || true
+    : > "$mf"
+    local rel
+    while IFS= read -r rel; do
+      [[ -n "$rel" ]] || continue
+      [[ -f "$TARGET/$rel" ]] && printf '%s\t%s\n' "$(nk_sha "$TARGET/$rel" || true)" "$rel" >> "$mf"
+    done <<< "$intended"
+    say "recorded kit manifest → .neyra/kit-manifest.tsv"
+  fi
+}
+
 # Convert templated-agent id to its enable-flag name (e.g. linear-router → ENABLE_LINEAR_ROUTER).
 # Uses tr (not bash-4 ${^^}) so it runs on stock macOS bash 3.2 too.
 enable_flag() { echo "ENABLE_$(printf '%s' "$1" | tr 'a-z-' 'A-Z_')"; }
@@ -444,13 +505,14 @@ if [[ "${ENABLE_HOOKS}" == "1" ]]; then
     mkdir -p "$tool_dst/hooks/lib"
     if cp "$KIT_DIR"/hooks/*.sh "$tool_dst/hooks/" 2>/dev/null; then chmod +x "$tool_dst"/hooks/*.sh; fi
     cp "$KIT_DIR"/hooks/lib/*.sh "$tool_dst/hooks/lib/" 2>/dev/null || true   # the host I/O shim the hooks source
-    for f in KIT_BOOTSTRAP.md doctor.sh source-policy.py lint-skills.py check-skill-mapping.py test-check-skill-mapping.py test-portable-reviewers.py check-egress.py lint-scope.py test-lint-scope.py test-gate-resolution.py check-cross-refs.py test-cross-refs.py check-external-leaks.py test-external-leaks.py lint-plans.py validate-codex-hooks.py VERSION; do
+    for f in $NK_TOOL_FILES; do
       [[ -f "$KIT_DIR/$f" ]] && cp "$KIT_DIR/$f" "$tool_dst/$f"
     done
     if [[ -d "$KIT_DIR/orchestration" ]]; then mkdir -p "$tool_dst/orchestration"; cp "$KIT_DIR"/orchestration/* "$tool_dst/orchestration/" 2>/dev/null || true; fi   # goal-mode driver + README
     chmod +x "$tool_dst/doctor.sh" 2>/dev/null || true
     say "copied hook scripts + doctor + linters into agents/neyra-dev-kit/"
   fi
+  retire_managed_artifacts   # NEB-1487: prune stale kit files no longer managed, then record the manifest
   hooks_json='{"SessionStart":[{"hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/session-start.sh\""}]}],"PreToolUse":[{"matcher":"Edit|Write|MultiEdit","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/pre-tool-use-guard.sh\""}]},{"matcher":"Task","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/count-task.sh\""}]}],"PostToolUse":[{"matcher":"Edit|Write|MultiEdit","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/post-tool-use-format.sh\""}]}],"Stop":[{"hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/stop-gate.sh\""}]}]}'
   sdst="$TARGET/.claude/settings.json"
   if [[ $DRY -eq 1 ]]; then
