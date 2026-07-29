@@ -313,3 +313,19 @@ authenticity against the source signals.
 **Consequence.** Every gate-path skill now names the excuse that would bypass it, closing
 the `pr-review-watch`/`post-merge-watch` asymmetry. `lint-skills.py` stays green
 (46 · 0 failed). Content-only across skills; no gate or behavior change.
+
+## 2026-07-29 — Cursor hook behavioural smoke closes the doctor false-green (v0.34.1)
+
+**Context.** NEB-1613: `.cursor/hooks.json` wires the PreToolUse guard to `preToolUse`,
+flagged as inert because `preToolUse` wasn't a documented Cursor event. Cursor's current
+hook docs now list it (with `allow`/`deny`), so the config is valid. The real remaining
+defect was `doctor.sh` reporting the Cursor config OK from file existence alone — it can't
+detect a config the host silently ignores. Same false-green class NEB-1483 fixed for Codex.
+
+**Decision.** Add a Cursor behavioural smoke to the full `doctor.sh` run, mirroring the
+Codex one: the guard must ALLOW a normal edit and DENY a kit-managed path. Cursor denies
+with `{"permission":"deny"}` on exit 0, so the smoke asserts on the emitted JSON, not the
+exit code. The config is unchanged — it is correct; "present" now means "verified working".
+
+**Consequence.** The Cursor guard can no longer regress to a silent no-op behind a green
+doctor. Full-run only (behavioural), so the Stop gate stays `--fast`.

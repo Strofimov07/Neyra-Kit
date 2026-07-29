@@ -206,6 +206,29 @@ else
 fi
 rm -f "$err"
 
+echo "── cursor hook smoke"
+# NEB-1613: Cursor supports `preToolUse` (confirmed against Cursor's current hook
+# docs), so the shipped `.cursor/hooks.json` guard is valid — but doctor used to
+# report the Cursor config OK from file existence alone, which cannot catch a config
+# the host ignores (the false-green this closes). Mirror the Codex behavioural smoke:
+# the guard must ALLOW a normal edit and DENY a kit-managed path. Cursor blocks with
+# `{"permission":"deny"}` on exit 0 (not exit 2 like Claude/Codex), so assert on the
+# emitted JSON, not the exit code.
+if printf '{"file_path":"src/main.py"}' | NEYRA_HOOK_HOST=cursor "$KIT/hooks/pre-tool-use-guard.sh" 2>/dev/null |
+   python3 -c 'import json,sys; raw=sys.stdin.read().strip(); d=json.loads(raw) if raw else {}; sys.exit(1 if d.get("permission")=="deny" else 0)'; then
+  echo "ok: Cursor PreToolUse allows normal file edits"
+else
+  echo "FAIL: Cursor PreToolUse denied a normal file edit"
+  fail=1
+fi
+if printf '{"file_path":"AGENTS.neyra-devkit.md"}' | NEYRA_HOOK_HOST=cursor "$KIT/hooks/pre-tool-use-guard.sh" 2>/dev/null |
+   python3 -c 'import json,sys; raw=sys.stdin.read().strip(); d=json.loads(raw) if raw else {}; sys.exit(0 if d.get("permission")=="deny" else 1)'; then
+  echo "ok: Cursor PreToolUse blocks a kit-managed path (permission:deny)"
+else
+  echo "FAIL: Cursor PreToolUse did not block a kit-managed path (guard inert under Cursor)"
+  fail=1
+fi
+
 echo ""
 if [ "$fail" -eq 0 ]; then echo "doctor: OK"; else echo "doctor: FAILURES above"; fi
 exit "$fail"
