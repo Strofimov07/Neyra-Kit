@@ -124,6 +124,7 @@ run "skill↔subagent map"   python3 "$KIT/check-skill-mapping.py"
 run "plans lint"           python3 "$KIT/lint-plans.py"
 run "bundled-skill egress" python3 "$KIT/check-egress.py"
 run "scope-lint regression" python3 "$KIT/test-lint-scope.py"
+run "gate-resolution regression" python3 "$KIT/test-gate-resolution.py"
 run "external-leak regression" python3 "$KIT/test-external-leaks.py"
 if [ -f "$KIT/test-codex-hooks.py" ]; then
   run "Codex hook regression" python3 "$KIT/test-codex-hooks.py"

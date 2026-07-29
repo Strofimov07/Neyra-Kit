@@ -247,3 +247,18 @@ and the documented EVOLVING-THE-KIT gate commands now validate instead of silent
 skipping. `--fast` runs in <1s vs ~2.6s. Explicit-arg invocations are unchanged (still
 cwd-relative), so the unit tests and any target-directory callers keep working. Consumers
 pick this up on the next `install.sh`.
+
+## 2026-07-29 — gate-resolution regression coverage (v0.33.1)
+
+**Context.** v0.33.0 hardened the standalone gates (NEB-1486) but shipped without the
+automated regression its DoD required — the fail-closed and wrong-cwd behavior was only
+checked by hand. Closing an issue with an unmet DoD item is the exact antipattern the
+signal ledger already records ("no unticketed follow-ups before closure").
+
+**Decision.** Add `test-gate-resolution.py`: the three gates validate (not skip) when run
+from `agents/neyra-dev-kit/` and from an unrelated cwd, and a gate copied outside a kit
+tree fails closed. Wired into the full `doctor.sh` run and the installer's copy list so
+consumers carry it.
+
+**Consequence.** NEB-1486's DoD is fully met; a regression back to cwd-relative resolution
+or a vacuous pass now fails `doctor`. Patch bump only — no behavior change to the gates.
