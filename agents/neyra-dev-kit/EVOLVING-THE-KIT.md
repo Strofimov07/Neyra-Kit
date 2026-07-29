@@ -49,7 +49,9 @@ read this first.
   Linear project instead of editing their generated kit tree.
 - Bump `agents/neyra-dev-kit/VERSION` (semver): **minor** for a new skill or new
   rule (new observable behaviour), **patch** for a bug fix or prose-only change.
-- Update the literal `<!-- kit-version: X.Y.Z -->` footer in `AGENTS.devkit.md`.
+- The `<!-- kit-version: {{KIT_VERSION}} -->` footer renders from VERSION at install for
+  every governance profile — no manual per-release footer bump. `doctor` accepts the raw
+  placeholder in the canonical repo and checks the rendered value in a consumer.
 - Append a `decisionLog.md` entry (`## DATE — <decision>` + **Context** /
   **Decision** / **Consequence**) — the *why*; Linear holds the *what/when*.
 
@@ -63,6 +65,20 @@ python3 lint-scope.py                             # generic layers carry zero pr
 python3 lint-plans.py                             # plan-format checks (if touched)
 python3 check-skill-mapping.py                    # map ↔ manifest ↔ skills, no drift
 bash doctor.sh                                    # overall status
+```
+
+**When you add or harden a gate, validate it on every bundle profile — not just
+canonical/dev.** A fail-closed that assumes the dev layout (e.g. requires
+`agents/dev-skills`) silently breaks product/growth/mgmt consumers, which ship a
+different skills layer; distinguish "absent because this profile doesn't ship it" (N/A)
+from "absent because broken" (fail). Install each into a throwaway git repo and run its
+`doctor.sh`:
+
+```bash
+for k in dev product growth mgmt; do
+  t="$(mktemp -d)"; git -C "$t" init -q
+  ./install.sh "$k" "$t" configs/_product.example.sh >/dev/null && "$t/agents/neyra-dev-kit/doctor.sh" || echo "FAIL: $k"
+done
 ```
 
 ## 6. Re-install into a consumer repo

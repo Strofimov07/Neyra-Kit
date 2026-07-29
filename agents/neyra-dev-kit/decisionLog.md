@@ -443,3 +443,25 @@ how to clear it. No gate = not goal-mode = normal dispatch, never blocked (no fa
 **Consequence.** Checkpoint 1 is enforced, not hoped for, on Claude Code. A canonical
 `doctor.sh` smoke asserts block-while-awaiting / allow-after-approval /
 no-false-positive-when-inactive. Cursor/Codex enforcement stays protocol-prose (documented).
+
+## 2026-07-30 — kit-evolution: promote two sprint signals to rules (v0.34.7)
+
+**Context.** The 10-task kit sprint surfaced two recurring, costly patterns, captured via the
+kit-evolution loop. (1) Two issues (NEB-1486, NEB-1502) were closed as Done before their full
+DoD was met — worked from the title/summary, not the body's acceptance criteria (both caught
+and fixed in follow-up PRs). (2) Hardening two gates to fail-closed on a missing
+`agents/dev-skills` silently broke `doctor` for non-dev bundles, caught only by empirically
+installing those profiles (NEB-1484). Three lighter one-offs (governance-footer drift,
+destructive-op list drift, a commit-on-main slip) were already closed structurally during the
+sprint and are logged for the record.
+
+**Decision.** Promote the two patterns. `release-readiness` §6 gains a bullet + a
+rationalization row: read the full issue body, enumerate its acceptance criteria, and confirm
+each before Done — the title is not the DoD. `EVOLVING-THE-KIT.md` §5 gains a gate-authoring
+rule with a runnable per-profile `install + doctor` loop, distinguishing "not shipped by this
+profile" (N/A) from "broken" (fail). All five signals recorded in `signals.log`. Also fixed a
+drift introduced by NEB-1484: §4 still instructed authors to bump a literal footer that is now
+the `{{KIT_VERSION}}` render.
+
+**Consequence.** The two failure modes that recurred this session now have a named rule the
+next run trips over, not just hindsight. Prose/rule-only; no code or gate behaviour change.

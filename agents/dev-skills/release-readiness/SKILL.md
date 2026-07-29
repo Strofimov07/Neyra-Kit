@@ -77,10 +77,14 @@ Decide whether the change is actually ready to ship or only ready to merge.
   **and naming who accepted the debt**. An agent-authored "not needed" with no named
   owner does not count.
 - Never move an issue to done while it still carries open, unticketed acceptance items.
+- Before closing, re-read the issue's **full body** and enumerate its acceptance criteria,
+  then confirm each is met. Working from the title or a summary is how an AC you never read
+  becomes an AC you never met — verify the list, not your memory of it.
 
 **Success criteria**
 - Every named follow-up exists as a ticket, or as a recorded no-ticket decision with an
   owner — not only as prose in a commit, PR, or chat.
+- Every acceptance criterion in the issue body is confirmed met before the issue is closed.
 
 ## Common rationalizations (and why they're invalid)
 
@@ -93,3 +97,4 @@ Decide whether the change is actually ready to ship or only ready to merge.
 | "No rollback needed." | Then state explicitly why the risk is acceptable — don't leave it unstated. |
 | "I noted the follow-up in the commit/PR body." | Merged commit bodies are write-only; nobody re-reads them. File the ticket now, or record an explicit no-ticket decision on the issue. |
 | "The remaining items are small, closing anyway." | The issue's own acceptance list is the closure contract. Ticket what's left, or leave it open. |
+| "The diff does what the title says — close it." | The title is a label, not the DoD. Read the full issue body, enumerate its acceptance criteria, and confirm each — an AC you never read is one you never met. |
