@@ -11,6 +11,7 @@ Usage: lint-scope.py [dir ...]   (default: agents/dev-skills agents/product-skil
 """
 
 import ipaddress
+import os
 import re
 import sys
 from pathlib import Path
@@ -88,5 +89,30 @@ def lint(dirs: list[str]) -> int:
     return 0
 
 
+def _repo_root() -> Path:
+    """Resolve the repo root from this script's own location so a standalone run
+    from any cwd validates the same tree as doctor.sh (which cd's to root).
+
+    Script lives at agents/neyra-dev-kit/lint-scope.py → root is three parents up.
+    Falls back to cwd if the layout isn't recognized (e.g. copied elsewhere)."""
+    cand = Path(__file__).resolve().parent.parent.parent
+    return cand if (cand / "agents").is_dir() else Path.cwd()
+
+
 if __name__ == "__main__":
-    sys.exit(lint(sys.argv[1:] or ["agents/dev-skills", "agents/product-skills", "agents/mgmt-skills"]))
+    args = sys.argv[1:]
+    if args:
+        sys.exit(lint(args))
+    # No explicit targets: resolve the defaults against the repo root, not the cwd.
+    # Run from agents/neyra-dev-kit/, every default dir used to be unresolved, so the
+    # linter printed "skip … / OK" and passed vacuously (NEB-1486). chdir keeps the
+    # report paths relative and matches doctor.sh's cwd=root contract.
+    os.chdir(_repo_root())
+    defaults = ["agents/dev-skills", "agents/product-skills", "agents/mgmt-skills"]
+    if not any(Path(d).is_dir() for d in defaults):
+        print(
+            f"lint-scope: FAIL — no skill layer ({', '.join(defaults)}) found under "
+            f"{Path.cwd()} — wrong location or broken install; refusing to pass vacuously."
+        )
+        sys.exit(1)
+    sys.exit(lint(defaults))
