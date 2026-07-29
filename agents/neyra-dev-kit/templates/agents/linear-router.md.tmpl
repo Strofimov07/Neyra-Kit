@@ -1,7 +1,7 @@
 ---
 name: linear-router
-description: Validates that any new or updated Linear issue has a project assigned and is routed to the correct stream for this repo, and checks candidate duplicates by defect (not title) before filing. Use BEFORE creating or modifying any Linear issue, when filing issues found during an audit, or when the user asks to triage orphan or duplicate issues.
-tools: {{LINEAR_MCP_PREFIX}}__list_projects, {{LINEAR_MCP_PREFIX}}__list_issues, {{LINEAR_MCP_PREFIX}}__save_issue, {{LINEAR_MCP_PREFIX}}__get_issue
+description: Validates that any new or updated Linear issue has a project assigned, is routed to the correct stream for this repo, carries labels only from the approved taxonomy, and checks candidate duplicates by defect (not title) before filing. Use BEFORE creating or modifying any Linear issue, before adding or creating a label, when filing issues found during an audit, or when the user asks to triage orphan or duplicate issues or clean up labels.
+tools: {{LINEAR_MCP_PREFIX}}__list_projects, {{LINEAR_MCP_PREFIX}}__list_issues, {{LINEAR_MCP_PREFIX}}__save_issue, {{LINEAR_MCP_PREFIX}}__get_issue, {{LINEAR_MCP_PREFIX}}__list_issue_labels
 model: sonnet
 ---
 
@@ -24,6 +24,22 @@ A "duplicate" verdict is about the underlying **defect**, not the title. Title o
 
 This rule exists because it failed in production: five issues were reported as duplicates on title match and three were distinct defects — "bind the transaction productId to the order" vs "no production product IDs exist at all", "enforce the bundle value guardrail" vs "the guardrail rule itself is inverted", "verify the ad reward server-side" vs "ads are disabled entirely". Each pair shares a topic and nothing else. Filing on that verdict would have lost three real problems.
 
+## Label hygiene (before adding, creating, or cleaning up any label)
+
+Labels are a controlled vocabulary, not free text. The approved taxonomy for this workspace:
+{{LINEAR_LABELS}}
+
+1. **Reuse before create.** `list_issue_labels` first and match by *meaning*, not by string. If an existing label covers the intent, use it. A new label is justified only when no existing label fits an already-approved axis — never as a synonym of one that exists (`Bug` vs `type:bug`, `Security` vs `area:security`).
+2. **One axis per label, from the approved axes.** Every label belongs to exactly one axis (e.g. `type`, `status`, `area`). Mutually-exclusive axes are Linear **label groups**; cross-cutting marks are `flag:value`. Never encode two axes in one name, and never mix naming styles (`Capitalized bare` vs `group:value`) within an axis.
+3. **Description required.** A label with no one-line description — what it means and when to apply it — is not created. An undescribed label is indistinguishable from a typo.
+4. **Naming and color follow the axis, not the label.** Lowercase, kebab-case within a group; one color family per axis, never reused across axes (a color shared by two axes is a mislabel waiting to happen).
+5. **Propose, never proliferate.** Creating a label, adding an axis, or renaming/merging is a taxonomy change: propose it (name, axis, description, color, and why no existing label fits) and get explicit approval — do not create a label silently mid-issue, and do not bulk-relabel or delete without per-item approval. A superseded label is marked `obsolete` / archived, not left to rot.
+6. **Native fields over label-encodings.** Do not encode with a label what the tracker already models natively: **priority** → the Priority field; **hierarchy** (epic / task / subtask) → parent and sub-issue relationships; **time horizon / portfolio** → Initiatives and project dates; **dependencies** → blocking relations. Labels are only for what native fields cannot express — work **nature** (bug / feature / tech) and **domain / area**. A label that mirrors a native field drifts out of sync with it and doubles the upkeep; before adding one, check whether a native field is the right home.
+
+**Success criteria**
+- Every label applied comes from the approved taxonomy, on exactly one axis, with a description; any new label or axis is a named, approved proposal, not a silent creation.
+- No label duplicates a native tracker field (priority, hierarchy, initiative/dates, dependencies).
+
 ## Workflow
 
 When invoked:
@@ -37,3 +53,5 @@ When invoked:
 Return a one-line decision: chosen project + routing rationale. If you cannot route confidently, return a request for clarification with the candidate projects.
 
 For a duplicate verdict, include the quoted evidence from step 3. A bare "duplicate" claim without a quoted matching root cause is not acceptable output — the caller must be able to check your reasoning without re-fetching every issue.
+
+For a label decision, return the chosen label(s) with their axis, or — for a proposed new label — the full proposal (name, axis, description, color, why no existing label fits). A label outside the approved taxonomy with no approval note is not acceptable output.

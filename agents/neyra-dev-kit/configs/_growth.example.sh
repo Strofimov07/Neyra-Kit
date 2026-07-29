@@ -10,6 +10,15 @@ LINEAR_WORKSPACE="your-workspace"
 read -r -d '' LINEAR_ROUTING <<'EOF' || true
    - ASO / growth / analytics / finance — **Nebula Browser**
 EOF
+# Approved label taxonomy — linear-router enforces reuse-before-create, one axis per
+# label, and a required description. Mutually-exclusive axes should be Linear label
+# groups; cross-cutting marks are flag:value. Fill `area:*` with your product's domains.
+read -r -d '' LINEAR_LABELS <<'EOF' || true
+   - type (group, one per issue): type:bug, type:feature, type:improvement, type:subtask
+   - status (group): status:blocked-external, status:blocked-governance
+   - area (group — fill in your product's domains): area:...
+   - flags (cross-cutting): boundary:execute, evidence:external, harness-evolution, obsolete
+EOF
 ENABLE_LINEAR_ROUTER=1
 ENABLE_NEYRA_MCP=0
 ENABLE_FIREBASE_MCP=0
