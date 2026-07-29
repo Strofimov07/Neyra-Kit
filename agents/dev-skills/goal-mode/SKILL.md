@@ -24,6 +24,10 @@ stops at checkpoints, and never takes an irreversible action on its own.
 ## Protocol
 
 ### 1. Frame the goal
+- **Arm the checkpoint-1 gate first:** write `.neyra/goal-mode.gate` = `awaiting-checkpoint-1`
+  before anything else. On Claude Code a PreToolUse hook blocks every `Task`/`Workflow`
+  dispatch while this marker is set — a deterministic backstop so checkpoint 1 cannot be
+  skipped under pressure (host-scoped: see Rules → Hosts).
 - Run `spec-elicitation`: turn the goal into a spec with **EARS acceptance
   criteria** and explicit non-goals. If the goal is already concrete, confirm the
   criteria in one pass.
@@ -43,6 +47,8 @@ stops at checkpoints, and never takes an irreversible action on its own.
 ### 3. CHECKPOINT 1 — approve the plan
 - Present the spec, the task plan, and the run caps (max iterations, budget, max
   lanes). Do not dispatch anything until the user approves.
+- On explicit approval, set `.neyra/goal-mode.gate` = `approved` — this releases the
+  dispatch hook. Until then the marker stays `awaiting-checkpoint-1` and dispatch is refused.
 
 **Success criteria**
 - No task is dispatched before explicit approval.
@@ -96,6 +102,8 @@ stops at checkpoints, and never takes an irreversible action on its own.
   budget); **two consecutive non-productive rounds** (no metric moved — spinning, not
   progressing); or a task is `BLOCKED` / `NEEDS_CONTEXT` with no safe next step. On
   stop, write a resumable summary: what landed, what remains, why it stopped.
+- Remove `.neyra/goal-mode.gate` on stop (and on any abort) so a finished run leaves no
+  marker behind. A stale gate is auto-ignored after 6h, but clean it up regardless.
 
 **Success criteria**
 - On stop, the state is resumable and the reason is explicit.
@@ -133,6 +141,10 @@ stops at checkpoints, and never takes an irreversible action on its own.
   deterministic driver `agents/neyra-dev-kit/orchestration/goal-mode.workflow.js`;
   Cursor and Codex follow this protocol via their host `/loop`. Checkpoints happen in
   the main loop, between batches — the driver never merges or acts outward.
+- **Checkpoint-1 enforcement is Claude-Code-only.** The PreToolUse hook that refuses
+  `Task`/`Workflow` dispatch while `.neyra/goal-mode.gate` is `awaiting-checkpoint-1`
+  is wired on Claude Code. Cursor and Codex dispatch differently and are not hook-guarded
+  here — on those hosts checkpoint 1 rests on this protocol and the host `/loop`.
 - **Anti-drift is host-neutral.** The per-round observable, goal re-anchor, compact
   `STATE.md`, and non-productive-round stop apply on all three tools. On Claude Code
   the driver *computes and enforces* them (schema-required fields + computed
