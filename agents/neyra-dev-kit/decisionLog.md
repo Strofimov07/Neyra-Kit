@@ -276,3 +276,19 @@ returns gracefully.
 
 **Consequence.** A mis-shaped invocation now either works (valid stringified JSON) or
 fails loudly with a fix hint, never no-ops silently. Driver-only change; no protocol change.
+
+## 2026-07-29 — goal-mode: empty batch fails loudly + robust-invocation docs (v0.33.3)
+
+**Context.** NEB-1502 carried three DoD items; v0.33.2 shipped only the stringified-arg
+parse. Two remained: an empty batch should fail loudly (post-checkpoint-1 an empty batch
+is always a caller error), and the robust wrapper-invocation pattern should be documented.
+Closing the issue at v0.33.2 left both unmet — the same premature-closure antipattern the
+ledger warns about.
+
+**Decision.** The empty-tasks guard now throws instead of returning `{ results: [] }` — a
+silent no-op reads as "round ran, nothing to do" and burns an approved round.
+`orchestration/README.md` gains a **Robust invocation** section: dispatch the driver from a
+thin wrapper via `workflow(ref, argsObject)` to guarantee the child receives a real object.
+
+**Consequence.** NEB-1502's DoD is fully met. Behavior change from v0.33.2: a caller that
+dispatches an empty batch now gets a clear error instead of a benign empty result.

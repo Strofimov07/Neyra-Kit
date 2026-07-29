@@ -47,6 +47,26 @@ holding the goal, not adding steps. The driver returns signals the main loop act
    via `pr-hygiene`, re-evaluates the goal, and loops or stops.
 5. `loop` resumes the active goal ledger for another bounded iteration.
 
+### Robust invocation (avoid stringified args)
+
+The harness can deliver `Workflow.args` as a JSON-*string* rather than an object, in
+which case `args.tasks` is `undefined`. The driver now tolerates this — it parses a
+stringified payload and **throws** on malformed JSON or an empty batch rather than
+silently no-opping (NEB-1502) — but the reliable path is a thin wrapper script that
+hands the child a real object:
+
+```js
+// goal-<id>.run.js — dispatch one approved batch
+export const meta = { name: 'goal-run', description: 'dispatch one goal-mode batch' }
+return await workflow(
+  { scriptPath: 'agents/neyra-dev-kit/orchestration/goal-mode.workflow.js' },
+  { goal: '<goal>', lanes: 2, tasks: [ /* { id, ticket, title, brief } … */ ] },
+)
+```
+
+`workflow(ref, argsObject)` passes the child a real object, sidestepping any host-level
+stringification of a top-level `args`.
+
 **Cursor / Codex (no Workflow engine):** invoke the `goal-mode` skill (`/goal-mode`
 or `@goal-mode`) and drive iterations with the host `/loop`. Same protocol, same
 checkpoints — the batch runs as ordinary skill-guided steps instead of the driver.
