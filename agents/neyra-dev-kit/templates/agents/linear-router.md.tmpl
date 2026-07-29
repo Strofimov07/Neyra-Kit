@@ -34,9 +34,11 @@ Labels are a controlled vocabulary, not free text. The approved taxonomy for thi
 3. **Description required.** A label with no one-line description — what it means and when to apply it — is not created. An undescribed label is indistinguishable from a typo.
 4. **Naming and color follow the axis, not the label.** Lowercase, kebab-case within a group; one color family per axis, never reused across axes (a color shared by two axes is a mislabel waiting to happen).
 5. **Propose, never proliferate.** Creating a label, adding an axis, or renaming/merging is a taxonomy change: propose it (name, axis, description, color, and why no existing label fits) and get explicit approval — do not create a label silently mid-issue, and do not bulk-relabel or delete without per-item approval. A superseded label is marked `obsolete` / archived, not left to rot.
+6. **Native fields over label-encodings.** Do not encode with a label what the tracker already models natively: **priority** → the Priority field; **hierarchy** (epic / task / subtask) → parent and sub-issue relationships; **time horizon / portfolio** → Initiatives and project dates; **dependencies** → blocking relations. Labels are only for what native fields cannot express — work **nature** (bug / feature / tech) and **domain / area**. A label that mirrors a native field drifts out of sync with it and doubles the upkeep; before adding one, check whether a native field is the right home.
 
 **Success criteria**
 - Every label applied comes from the approved taxonomy, on exactly one axis, with a description; any new label or axis is a named, approved proposal, not a silent creation.
+- No label duplicates a native tracker field (priority, hierarchy, initiative/dates, dependencies).
 
 ## Workflow
 

@@ -204,7 +204,13 @@ exclusive axes (type, status) are Linear **label groups**; cross-cutting marks s
 `flag:value`. The concrete taxonomy is delegated to a new `{{LINEAR_LABELS}}` placeholder
 rendered from consumer config — the skill owns the shape, `settings/` owns the label set,
 per the scoping rule. `list_issue_labels` is added to the router's tool set for the
-reuse check.
+reuse check. A companion rule — **native fields over label-encodings** — was added after a
+live migration showed priority, hierarchy, and time-horizon encoded as labels (`prio:*`,
+`type:task/subtask/epic`, `horizon:*`) duplicating native tracker fields that were already
+populated (priority set on ~99% of tagged issues, sub-issues natively parented): labels are
+reserved for work **nature** and **domain**, while priority, hierarchy, dependencies, and
+portfolio grouping live in their native homes (Priority, parent/sub-issue, blocking
+relations, Initiatives).
 
 **Consequence.** The router now gates labels at create/relabel time and can drive a
 cleanup pass, but never deletes or bulk-relabels without per-item approval. Consumers
