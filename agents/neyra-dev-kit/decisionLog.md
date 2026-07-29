@@ -262,3 +262,17 @@ consumers carry it.
 
 **Consequence.** NEB-1486's DoD is fully met; a regression back to cwd-relative resolution
 or a vacuous pass now fails `doctor`. Patch bump only — no behavior change to the gates.
+
+## 2026-07-29 — goal-mode tolerates stringified Workflow args (v0.33.2)
+
+**Context.** `goal-mode.workflow.js` read `args.tasks` directly. When a caller (or a
+resumed run) hands Workflow args over stringified — a documented foot-gun of the Workflow
+tool — `args` is a string, `args.tasks` is `undefined`, and the batch silently returned
+"no tasks provided", hiding the mistake instead of surfacing it.
+
+**Decision.** Parse a stringified `args` payload before use, and throw a clear error when
+it is a string that is not valid JSON (NEB-1502). A genuine empty-tasks object still
+returns gracefully.
+
+**Consequence.** A mis-shaped invocation now either works (valid stringified JSON) or
+fails loudly with a fix hint, never no-ops silently. Driver-only change; no protocol change.

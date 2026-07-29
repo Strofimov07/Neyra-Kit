@@ -18,8 +18,25 @@ export const meta = {
   phases: [{ title: 'Implement' }, { title: 'Gate' }],
 }
 
-const tasks = (args && args.tasks) || []
-const goal = (args && args.goal) || '(goal unspecified)'
+// Workflow args should arrive as a real JSON object, but a caller (or a resumed
+// run) can hand them over stringified — in which case `args.tasks` is undefined and
+// the batch would silently no-op as "no tasks provided", hiding the mistake. Tolerate
+// a stringified payload by parsing it, and fail LOUDLY when it is a string that is not
+// valid JSON rather than swallowing it (NEB-1502).
+let input = args
+if (typeof input === 'string') {
+  try {
+    input = JSON.parse(input)
+  } catch (e) {
+    throw new Error(
+      `goal-mode: args arrived as a string that is not valid JSON (${e.message}). ` +
+        `Pass Workflow args as an actual JSON object ({ goal, lanes, tasks }), not a stringified one.`,
+    )
+  }
+}
+
+const tasks = (input && input.tasks) || []
+const goal = (input && input.goal) || '(goal unspecified)'
 if (!tasks.length) {
   log('goal-mode: args.tasks is empty — nothing to execute')
   return { results: [], note: 'no tasks provided' }
