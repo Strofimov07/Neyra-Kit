@@ -38,8 +38,16 @@ if (typeof input === 'string') {
 const tasks = (input && input.tasks) || []
 const goal = (input && input.goal) || '(goal unspecified)'
 if (!tasks.length) {
-  log('goal-mode: args.tasks is empty — nothing to execute')
-  return { results: [], note: 'no tasks provided' }
+  // The driver runs only AFTER checkpoint-1 approval, so an empty batch is always a
+  // caller error, not a valid state. Fail loudly rather than returning a benign empty
+  // result that reads as "round ran, nothing to do" and silently burns the approved
+  // round (NEB-1502).
+  throw new Error(
+    'goal-mode: no tasks to execute — args.tasks is empty. A goal-mode batch is ' +
+      'dispatched only after checkpoint-1 approval, so an empty batch is a caller error. ' +
+      'Pass { goal, lanes, tasks: [{ id, ticket, title, brief }] } as a real JSON object ' +
+      '(see orchestration/README.md § Robust invocation).',
+  )
 }
 log(`goal-mode batch: ${tasks.length} task(s) toward: ${goal}`)
 
