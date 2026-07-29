@@ -141,13 +141,26 @@ def check_readme_index(root, dev_skills):
     return errs
 
 
+def _repo_root():
+    """Repo root from this script's own location (three parents up), so a standalone
+    run from any cwd validates the same tree as doctor.sh. Falls back to cwd if the
+    layout isn't recognized."""
+    cand = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return cand if os.path.isdir(os.path.join(cand, "agents")) else os.getcwd()
+
+
 def main():
-    root = os.getcwd()
+    root = _repo_root()
     skills_dir = os.path.join(root, "agents/dev-skills")
     agents_dir = os.path.join(root, ".claude/agents")
     if not os.path.isdir(skills_dir) or not os.path.isdir(agents_dir):
-        print("skip: agents/dev-skills or .claude/agents not found")
-        return 0
+        # Fail closed. Previously returned 0 ("skip"), so a standalone run from the
+        # wrong cwd — where these dirs didn't resolve — passed vacuously (NEB-1486).
+        # With root resolved from the script's own location, a real kit tree always
+        # has both; their absence means wrong location or broken install.
+        print("FAIL: agents/dev-skills and/or .claude/agents not found under %s — "
+              "wrong location or broken install; refusing to pass vacuously." % root)
+        return 1
 
     dev_skills = {
         d

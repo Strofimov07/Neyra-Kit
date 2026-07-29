@@ -4,8 +4,26 @@
 # asserts the deterministic-enforcement surfaces are wired (hooks) and present
 # (decisionLog). Exit non-zero on any hard failure; WARN lines don't fail.
 #
-# Usage: agents/neyra-dev-kit/doctor.sh
+# Usage: agents/neyra-dev-kit/doctor.sh [--fast]
+#   (default)  full run — structural integrity PLUS the prose/frontmatter linters,
+#              regressions, egress scan, Codex/Firebase/Impeccable smokes, and
+#              branch hygiene. This is the CI + manual gate.
+#   --fast     structural integrity only — source identity, hook wiring,
+#              decisionLog, version stamp, multi-tool surfaces. The Stop gate
+#              calls this (NEB-1612): the full run is fail-closed, and its prose
+#              linters can reject a benign markdown (a quoted "TODO", a BOM, a
+#              non-UTF-8 byte), which would then block *every* agent turn in the
+#              repo. Structural checks can't be tripped by document content.
 set -uo pipefail
+
+FAST=0
+for arg in "$@"; do
+  case "$arg" in
+    --fast) FAST=1 ;;
+    -h|--help) sed -n '7,17p' "$0"; exit 0 ;;
+    *) echo "doctor: unknown arg '$arg' (usage: doctor.sh [--fast])" >&2; exit 2 ;;
+  esac
+done
 
 KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$KIT/../.." && pwd)"
@@ -14,7 +32,14 @@ cd "$ROOT"   # the python checkers resolve paths from cwd
 fail=0
 run() { local label="$1"; shift; echo "── $label"; if ! "$@"; then fail=1; fi; }
 
-echo "neyra-dev-kit doctor v$(cat "$KIT/VERSION") — $ROOT"
+mode="full"; [ "$FAST" -eq 1 ] && mode="fast"
+echo "neyra-dev-kit doctor v$(cat "$KIT/VERSION") [$mode] — $ROOT"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Structural integrity — always run, in both --fast and full. These check the
+# shape of the install (identity, wiring, presence, version stamp); none of them
+# can be tripped by the *content* of a document, so they are safe on the Stop gate.
+# ─────────────────────────────────────────────────────────────────────────────
 echo "── source policy"
 if [ -f "$ROOT/.neyra-kit-canonical" ]; then
   run "canonical authoring identity" python3 "$KIT/source-policy.py" --root "$ROOT" --require-canonical
@@ -22,55 +47,6 @@ elif [ -f "$ROOT/.neyra-dev-kit.source" ]; then
   run "consumer source identity" python3 "$KIT/source-policy.py" --root "$ROOT"
 else
   echo "WARN: no canonical marker or consumer source stamp — re-install from Neyra-Kit"
-fi
-if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; then
-  run "source-policy regression" python3 "$KIT/test-source-policy.py"
-  run "canonical leak scan" python3 "$KIT/check-external-leaks.py" "$ROOT"
-fi
-run "skills lint"          python3 "$KIT/lint-skills.py"
-run "skill-mapping regression" python3 "$KIT/test-check-skill-mapping.py"
-run "portable-reviewer regression" python3 "$KIT/test-portable-reviewers.py"
-run "skill↔subagent map"   python3 "$KIT/check-skill-mapping.py"
-run "plans lint"           python3 "$KIT/lint-plans.py"
-run "bundled-skill egress" python3 "$KIT/check-egress.py"
-run "scope-lint regression" python3 "$KIT/test-lint-scope.py"
-run "external-leak regression" python3 "$KIT/test-external-leaks.py"
-if [ -f "$KIT/test-codex-hooks.py" ]; then
-  run "Codex hook regression" python3 "$KIT/test-codex-hooks.py"
-fi
-if [ -f "$KIT/test-firebase-mcp.py" ]; then
-  run "Firebase MCP regression" python3 "$KIT/test-firebase-mcp.py"
-fi
-if [ -f "$ROOT/agents/design-skills/impeccable/scripts/live-server.security.test.mjs" ]; then
-  if command -v node >/dev/null 2>&1; then
-    run "impeccable live security" node --test "$ROOT/agents/design-skills/impeccable/scripts/live-server.security.test.mjs"
-  else
-    echo "WARN: node not found — skip Impeccable live-server security regression"
-  fi
-fi
-
-echo "── branch hygiene"
-# Merged branches must not accumulate on origin (pr-hygiene: "Clean up after
-# merge"). Offline check against last-fetched refs — no network; if a branch
-# is already deleted on the remote but the ref lingers, git fetch -p heals it.
-if git rev-parse --git-dir >/dev/null 2>&1 && git remote get-url origin >/dev/null 2>&1; then
-  target=""
-  git show-ref --verify --quiet refs/remotes/origin/dev && target="origin/dev"
-  [ -z "$target" ] && git show-ref --verify --quiet refs/remotes/origin/main && target="origin/main"
-  if [ -n "$target" ]; then
-    stale="$(git branch -r --merged "$target" 2>/dev/null | grep -vE "origin/(dev|main|HEAD)" | sed 's/^ *//')"
-    if [ -n "$stale" ]; then
-      echo "FAIL: merged branches still on origin (vs $target) — git fetch -p, then git push origin --delete <branch>:"
-      printf '%s\n' "$stale" | sed 's/^/   ✗ /'
-      fail=1
-    else
-      echo "ok: no merged branches left on origin (vs $target, refs as of last fetch)"
-    fi
-  else
-    echo "note: no origin/dev or origin/main ref — skip branch hygiene"
-  fi
-else
-  echo "note: not a git repo with origin — skip branch hygiene"
 fi
 
 echo "── hooks"
@@ -125,6 +101,67 @@ if [ -d "$ROOT/settings/skills" ]; then
   done
 fi
 [ -f "$ROOT/.cursor/hooks.json" ] && echo "ok: Cursor hooks config present (.cursor/hooks.json)"
+
+if [ "$FAST" -eq 1 ]; then
+  echo ""
+  if [ "$fail" -eq 0 ]; then echo "doctor: OK [fast]"; else echo "doctor: FAILURES above [fast]"; fi
+  exit "$fail"
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Full run only — prose/frontmatter linters, regressions, egress, host smokes,
+# network-touching branch hygiene. These can legitimately fail on document
+# content, so they are kept off the per-turn Stop gate and run in CI + manually.
+# ─────────────────────────────────────────────────────────────────────────────
+if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; then
+  run "source-policy regression" python3 "$KIT/test-source-policy.py"
+  run "canonical leak scan" python3 "$KIT/check-external-leaks.py" "$ROOT"
+fi
+run "skills lint"          python3 "$KIT/lint-skills.py"
+run "skill-mapping regression" python3 "$KIT/test-check-skill-mapping.py"
+run "portable-reviewer regression" python3 "$KIT/test-portable-reviewers.py"
+run "skill↔subagent map"   python3 "$KIT/check-skill-mapping.py"
+run "plans lint"           python3 "$KIT/lint-plans.py"
+run "bundled-skill egress" python3 "$KIT/check-egress.py"
+run "scope-lint regression" python3 "$KIT/test-lint-scope.py"
+run "external-leak regression" python3 "$KIT/test-external-leaks.py"
+if [ -f "$KIT/test-codex-hooks.py" ]; then
+  run "Codex hook regression" python3 "$KIT/test-codex-hooks.py"
+fi
+if [ -f "$KIT/test-firebase-mcp.py" ]; then
+  run "Firebase MCP regression" python3 "$KIT/test-firebase-mcp.py"
+fi
+if [ -f "$ROOT/agents/design-skills/impeccable/scripts/live-server.security.test.mjs" ]; then
+  if command -v node >/dev/null 2>&1; then
+    run "impeccable live security" node --test "$ROOT/agents/design-skills/impeccable/scripts/live-server.security.test.mjs"
+  else
+    echo "WARN: node not found — skip Impeccable live-server security regression"
+  fi
+fi
+
+echo "── branch hygiene"
+# Merged branches must not accumulate on origin (pr-hygiene: "Clean up after
+# merge"). Offline check against last-fetched refs — no network; if a branch
+# is already deleted on the remote but the ref lingers, git fetch -p heals it.
+if git rev-parse --git-dir >/dev/null 2>&1 && git remote get-url origin >/dev/null 2>&1; then
+  target=""
+  git show-ref --verify --quiet refs/remotes/origin/dev && target="origin/dev"
+  [ -z "$target" ] && git show-ref --verify --quiet refs/remotes/origin/main && target="origin/main"
+  if [ -n "$target" ]; then
+    stale="$(git branch -r --merged "$target" 2>/dev/null | grep -vE "origin/(dev|main|HEAD)" | sed 's/^ *//')"
+    if [ -n "$stale" ]; then
+      echo "FAIL: merged branches still on origin (vs $target) — git fetch -p, then git push origin --delete <branch>:"
+      printf '%s\n' "$stale" | sed 's/^/   ✗ /'
+      fail=1
+    else
+      echo "ok: no merged branches left on origin (vs $target, refs as of last fetch)"
+    fi
+  else
+    echo "note: no origin/dev or origin/main ref — skip branch hygiene"
+  fi
+else
+  echo "note: not a git repo with origin — skip branch hygiene"
+fi
 
 codex_template="$KIT/templates/codex/hooks.json"
 codex_installed="$ROOT/.codex/hooks.json"

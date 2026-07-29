@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 # neyra-dev-kit Stop gate.
 #
-# When the main agent stops, run `kit doctor` (fast kit-consistency check). If it
-# fails, keep the agent going with the reason so the drift gets fixed before
+# When the main agent stops, run `kit doctor --fast` (structural integrity only).
+# If it fails, keep the agent going with the reason so the drift gets fixed before
 # finishing. Thrash-safe: exits immediately when already re-invoked by a prior
 # block, so it can never loop. Host-aware via the shim (Claude/Codex emit
 # {"decision":"block"}; Cursor emits {"followup_message"}). Repos can extend
 # doctor with their own lint/test for a stricter gate.
+#
+# NEB-1612: the gate runs --fast, NOT the full doctor. The full run is fail-closed
+# and includes prose/frontmatter linters that can reject a benign document (a
+# quoted "TODO", a UTF-8 BOM, a non-UTF-8 byte) — on the per-turn Stop gate that
+# would block *every* agent in the repo until the markdown is edited. --fast checks
+# only structural integrity (identity, wiring, version stamp), which no document's
+# content can trip. Full linting stays in CI and manual `doctor.sh`.
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,7 +23,7 @@ nk_load
 
 nk_stop_active && exit 0
 
-if out="$("$KIT/doctor.sh" 2>&1)"; then
+if out="$("$KIT/doctor.sh" --fast 2>&1)"; then
   # Post-merge CI net (NEB-1403): if the default branch's latest completed CI
   # run turned red, block ONCE per session (marker = thrash-safe) so a silent
   # post-merge failure is caught at the session boundary even when nobody

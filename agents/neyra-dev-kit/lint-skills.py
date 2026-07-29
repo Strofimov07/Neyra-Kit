@@ -84,9 +84,21 @@ def lint_file(path):
     return errs, warns
 
 
+def _repo_root():
+    """Repo root from this script's own location (agents/neyra-dev-kit/lint-skills.py
+    → three parents up), so a standalone run from any cwd validates the same tree as
+    doctor.sh. Falls back to cwd if the layout isn't recognized."""
+    cand = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return cand if os.path.isdir(os.path.join(cand, "agents")) else os.getcwd()
+
+
 def main(argv):
-    root = os.getcwd()
-    dirs = argv[1:] or ["agents/dev-skills", "agents/product-skills", "agents/mgmt-skills"]
+    args = argv[1:]
+    # No explicit dirs: resolve against the repo root, not cwd, so a run from
+    # agents/neyra-dev-kit/ still finds the skills instead of skipping and passing
+    # vacuously (NEB-1486).
+    root = os.getcwd() if args else _repo_root()
+    dirs = args or ["agents/dev-skills", "agents/product-skills", "agents/mgmt-skills"]
     files = []
     for d in dirs:
         ad = os.path.join(root, d)
@@ -97,6 +109,11 @@ def main(argv):
             p = os.path.join(ad, entry, "SKILL.md")
             if os.path.isfile(p):
                 files.append(p)
+
+    if not args and not files:
+        print("FAIL: no skill layer found under %s — wrong location or broken "
+              "install; refusing to pass vacuously (NEB-1486)." % root)
+        return 1
 
     n_fail = n_warn = 0
     for p in files:

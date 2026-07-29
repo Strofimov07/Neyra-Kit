@@ -219,3 +219,31 @@ empty keeps the generic rules with no enumerated set, so nothing breaks on upgra
 example configs carry a generic `type`/`status`/`area`/flags taxonomy with `area:*` left
 for the consumer to fill. Migrating an existing workspace's labels into groups is a
 separate, human-approved action against the live tracker, not part of this kit change.
+
+## 2026-07-29 — kit gates hardened: fast Stop gate + repo-root resolution (v0.33.0)
+
+**Context.** Two gate defects surfaced in the TradingCoreModules kit audit (NEB-1612,
+NEB-1486). (1) The Stop hook ran the **full** `doctor.sh` fail-closed on every turn, and
+doctor transitively runs prose/frontmatter linters — `lint-plans.py` flags a quoted
+`TODO`, `lint-skills.py` rejects a UTF-8 BOM, none handle a non-UTF-8 byte — so one benign
+markdown could exit non-zero and block **every** agent in the repo until the file was
+edited, plus a ~2.6s per-turn tax. (2) The standalone gates (`lint-scope.py`,
+`lint-skills.py`, `check-skill-mapping.py`) resolved their targets from the cwd, so
+running them the way EVOLVING-THE-KIT documents — from `agents/neyra-dev-kit/` — left
+every default dir unresolved and they printed `skip … / OK`, passing vacuously. A gate
+that greenlights from the wrong directory is worse than no gate.
+
+**Decision.** (1) `doctor.sh` gained a `--fast` mode — structural integrity only (source
+identity, hook wiring, decisionLog, version stamp, multi-tool surfaces), none of which a
+document's content can trip — and the Stop gate (`hooks/stop-gate.sh`) now calls
+`doctor.sh --fast`. The full run (linters, regressions, egress, Codex/Firebase/Impeccable
+smokes, branch hygiene) stays on CI and manual `doctor.sh`. (2) The three standalone gates
+now resolve the repo root from their own file location (three parents up), so any cwd
+validates the same tree, and they **fail closed** — a default invocation that finds no
+skill layer exits non-zero instead of printing OK.
+
+**Consequence.** A malformed markdown can no longer wedge every turn in a consumer repo,
+and the documented EVOLVING-THE-KIT gate commands now validate instead of silently
+skipping. `--fast` runs in <1s vs ~2.6s. Explicit-arg invocations are unchanged (still
+cwd-relative), so the unit tests and any target-directory callers keep working. Consumers
+pick this up on the next `install.sh`.
