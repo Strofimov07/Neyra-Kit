@@ -292,3 +292,24 @@ thin wrapper via `workflow(ref, argsObject)` to guarantee the child receives a r
 
 **Consequence.** NEB-1502's DoD is fully met. Behavior change from v0.33.2: a caller that
 dispatches an empty batch now gets a clear error instead of a benign empty result.
+
+## 2026-07-29 — anti-rationalization sweep across 12 dev-skills (v0.34.0)
+
+**Context.** A manual `code-reviewer` gate on an earlier kit PR found 12 of 31 dev-skills
+lacked a `Common rationalizations` block (NEB-1590) — including gate-path skills where a
+skipped step costs the most (`spec-review`, `pr-hygiene`, `post-merge-watch`,
+`subagent-dispatch`). `SKILL_CONTRACT.md` prescribes the block precisely for "skipped
+under pressure" failures: a rule the agent can rationalize around is not a fix until the
+excuse that bypasses it is named. The asymmetry was live — `pr-review-watch` had a block,
+its post-merge twin `post-merge-watch` did not, though the failure mode is identical.
+
+**Decision.** Add a `## Common rationalizations (and why they're invalid)` table (3–5 rows)
+to all 12, each row a real excuse + "why wrong → what to do" naming the skill's own
+step/rule, grounded in `signals.log` and each skill's documented failure modes — not
+manufactured formality. Every one of the 12 had a genuine skip-under-pressure mode, so no
+one-line justification was needed. Drafted by a subagent, then reviewed row-by-row for
+authenticity against the source signals.
+
+**Consequence.** Every gate-path skill now names the excuse that would bypass it, closing
+the `pr-review-watch`/`post-merge-watch` asymmetry. `lint-skills.py` stays green
+(46 · 0 failed). Content-only across skills; no gate or behavior change.

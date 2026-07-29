@@ -70,6 +70,16 @@ conclusion at session end (`hooks/stop-gate.sh`) and blocks once per session
 if it turned red — so a forgotten watch still gets caught at the session
 boundary. This skill is the active half; the hook is the net.
 
+## Common rationalizations (and why they're invalid)
+
+| The excuse | Why it's wrong → what to do |
+|---|---|
+| "Merge went green — the deploy will be fine, moving on." | The approval gate ends at the merge; the pipeline it triggers can still go red (merged green, deploy silently red). Poll the triggered runs to a terminal state (step 2) before starting new work. |
+| "I'll keep an eye on it." | "'I'll keep an eye on it' without a window is not a watch." State a bounded window (default 10 min; longer only for a known-slow deploy) and report the terminal state or an explicit "window expired, still running: <link>". |
+| "No CI is wired here — nothing to watch." | "No CI wired" is valid only *after* reading the config (step 1); assuming it silently removes the whole control. Name the watched pipeline set, or state "no CI wired" as a checked outcome. |
+| "The pipeline's already red — that's pre-existing, not mine." | Newly-red after your merge is yours by default; known-broken must be *confirmed* against `settings/facts/`, not assumed. If it's new, it's your regression — hand off to `systematic-debugging` / `incident-runbook` (step 4), don't just mention it. |
+| "The Stop-gate hook will catch a red CI anyway." | The hook is the net, not the watch — it fires once at session end on the default branch only. Relying on it lets a failure sit unsurfaced mid-session and misses non-default branches. Do the active watch; the hook is insurance. |
+
 ## Rules
 
 - Read-only on pipelines, always.

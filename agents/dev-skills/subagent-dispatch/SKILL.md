@@ -55,6 +55,16 @@ even after conversation compaction — without losing track of what each task di
 **Success criteria**
 - No task silently stalls; every block has a named cause and a next action.
 
+## Common rationalizations (and why they're invalid)
+
+| The excuse | Why it's wrong → what to do |
+|---|---|
+| "The conversation still has the full context — I don't need a separate ledger." | Conversation memory does not survive compaction; after one, the run is unreconstructable and you re-dispatch blind. Maintain the durable ledger file, updated as each task lands (step 1). |
+| "The diff is just `HEAD~1`, I'll compute the range from that." | Interleaved commits from other tasks make `HEAD~1` the wrong base and mis-attribute the diff. Record the exact BASE before dispatching and compute the range from it (step 2). |
+| "These two small tasks are related — I'll bundle them into one dispatch." | "One task per dispatch; do not bundle" — bundling makes the ledger's range and status ambiguous. Dispatch one task with fresh context (step 3). |
+| "The subagent came back BLOCKED — I'll just retry it." | A blind retry repeats the block. Triage to a named cause — missing context / flawed reasoning / scope too big / plan error — each with a different next action (step 4). |
+| "Each subagent reviewed its own work, so the gate's done." | A self-review isn't the gate. Each task's result still goes through `spec-review` + `code-reviewer` + `verify-runtime` (Rules) — a stale sibling test-fake slipped past because only the targeted files were run. |
+
 ## Rules
 
 - The ledger is the source of truth for the run — update it as each task lands.

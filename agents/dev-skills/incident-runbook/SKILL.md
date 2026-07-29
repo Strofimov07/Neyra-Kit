@@ -39,6 +39,15 @@ treat every mode as new and start capturing. Example entry shape:
 - containment applied and recovery verified on the real signal
 - any new mode captured back into the facts file
 
+## Common rationalizations (and why they're invalid)
+
+| The excuse | Why it's wrong → what to do |
+|---|---|
+| "Just restart it — that usually clears it." | A blind restart on the wrong mode wastes the outage or hides the cause. Match the signature and verify before any restart (steps 1–2); check `settings/facts/incident-runbook.md` first. |
+| "Healthcheck is green now — incident resolved." | A false-unhealthy/healthy service passes the check while users still fail. Verify recovery on the real signal users hit, not the healthcheck (step 3). |
+| "This looks new — I'll debug it from scratch." | Rediscovering a known root cause is the exact time-sink the runbook exists to kill. Match symptoms against the known-modes file before deep debugging (step 1). |
+| "Contained it — I'll document the new mode later." | A new mode not appended means the next on-call rediscovers it. Capture it into `settings/facts/incident-runbook.md` via `skill-capture` now and file the hardening task (step 4). |
+
 ## Non-goals
 
 Long-term hardening (file a separate task) and feature work.

@@ -41,6 +41,16 @@ Land changes as small, reviewable, correctly-attributed commits/PRs without swee
 - message + PR body carry no AI attribution and match the repo format
 - after merge, the branch is deleted and `git fetch --prune` run (no stale branches)
 
+## Common rationalizations (and why they're invalid)
+
+| The excuse | Why it's wrong → what to do |
+|---|---|
+| "It's a one-line fix — I'll just commit to the current branch." | "Everything goes through a PR" — a commit on the merge target skips review entirely. Branch first off `dev`/`main` (step 1), even for one line. |
+| "`git add -A` is faster than listing paths." | `-A` sweeps unrelated and pre-existing changes into your PR (step 2). Stage explicit paths for THIS change and review `git diff --cached --stat` before committing. |
+| "Same-sitting work — I'll flip the Linear issue to In Progress later / when I mark it Done." | A branch named for NEB-XXXX whose issue still says Backlog lies to the team and destroys the cycle-time-by-stage data delivery-audit and team-health-check compute from `startedAt`. Flip on start (step 1), Done only after the gate. |
+| "The PR title is close enough to what changed." | NEB-1407: a title claiming a surface the diff doesn't touch (e.g. an "iOS build repair" title over zero `ios/` files) misleads changelogs, release notes, and delivery-audit. Compare the title against `git diff --stat` and fix the title, not the expectation (step 5). |
+| "The checkout probably worked — I'll keep going." | A checkout blocked by another worktree exits non-zero; ignore the code and the next command lands commits on the branch you were already on (three did). After switching, confirm `git branch --show-current` and the base (Branch & merge policy). |
+
 ## Non-goals
 
 Code review (`simplify-diff` / `code-reviewer`) and release readiness (`release-readiness`) — separate skills.
