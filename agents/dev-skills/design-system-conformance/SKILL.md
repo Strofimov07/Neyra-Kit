@@ -43,3 +43,12 @@ Keep UI changes visually and behaviorally consistent with the surface.
 
 **Success criteria**
 - The diff looks native to the surface, not like imported generic UI.
+
+## Common rationalizations (and why they're invalid)
+
+| The excuse | Why it's wrong → what to do |
+|---|---|
+| "It's faster to build this component fresh than to hunt for an existing one." | A fresh component drifts from the surface and duplicates behavior. "Reuse first" — check existing components, tokens, and shipped patterns before creating new structure (step 1). |
+| "It's just the default state — other states aren't in scope." | Hover, focus, disabled, loading, empty, and error states are where the surface visibly breaks (step 2). Review them; a missing empty/error state is a defect, not a detail. |
+| "This one hex/spacing value is fine hardcoded." | One hardcoded value is the seed of divergence. Anchor styling in typography/spacing/color tokens, not ad hoc values (step 3). |
+| "The task is about behavior — matching the visual language is optional." | Preserve the existing visual language unless the task explicitly changes it (step 4), or the diff reads as imported generic UI. Match the surface. |

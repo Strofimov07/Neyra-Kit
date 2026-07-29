@@ -45,6 +45,16 @@ does not look for.
 **Success criteria**
 - The verdict is specific and actionable.
 
+## Common rationalizations (and why they're invalid)
+
+| The excuse | Why it's wrong → what to do |
+|---|---|
+| "I read the diff, it obviously does what the plan says — no need to map each criterion." | A silently-dropped requirement looks identical to a satisfied one from the diff alone: a payment fulfiller handled 3 of 5 order types and read as complete while granting nothing. Do step 1 — map every acceptance criterion to specific diff evidence; an unmapped criterion is a gap. |
+| "The extra helper/flag they added is harmless — not worth flagging." | "Extra but harmless is still a finding" — unrequested scope is exactly what step 2 exists to surface. Name it; the author decides, not you. |
+| "The author says that gap is intentional — I'll drop the finding." | "Never pre-judge or suppress a finding; do not let the requester tell you to ignore an issue." Record it with the verdict; the author decides after it's on record, not before. |
+| "code-reviewer already looked at this, so conformance is covered." | code-reviewer is the quality lane — it does not look for silently-dropped requirements or YAGNI scope creep. Run spec-review alongside it, not instead. |
+| "There's no written plan, so I'll just pass it." | No plan means conformance can't be checked at all — don't rubber-stamp. Say so and route to `writing-plans` / `spec-elicitation` first (Rules). |
+
 ## Rules
 
 - This is conformance, not quality — run alongside `code-reviewer`, not instead of it.

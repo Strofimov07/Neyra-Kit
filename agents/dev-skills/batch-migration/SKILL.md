@@ -50,3 +50,12 @@ Turn a sweeping change into independently verifiable work units without losing c
 
 **Success criteria**
 - The batch change reads like one coherent migration, not unrelated patches.
+
+## Common rationalizations (and why they're invalid)
+
+| The excuse | Why it's wrong → what to do |
+|---|---|
+| "This is big — I'll spin up parallel sub-agents to move faster." | Parallel/delegated execution is allowed only when the user explicitly asks for sub-agents or parallel work (step 3). Absent that approval, keep the plan local and sequential. |
+| "I'll figure out how to verify each unit as I go." | Define the verification recipe up front; if no concrete path exists, stop and ask instead of guessing (step 2). No path means don't start the unit. |
+| "These slices are close enough — unit B can just build on A." | Sibling coupling breaks independent review and any parallelism. Avoid units that depend on another landing first; split by stable boundaries — module, directory, feature slice, contract family (step 1). |
+| "Each patch works on its own — minor style differences are fine." | The batch must read like one coherent migration, not unrelated patches. Reconcile to the same conventions, contracts, and naming across every unit (step 4). |

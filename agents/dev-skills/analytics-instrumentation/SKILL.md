@@ -53,3 +53,12 @@ to run, funnel and retention design — is `growth-analytics`
 
 **Success criteria**
 - Product analytics claims remain honest.
+
+## Common rationalizations (and why they're invalid)
+
+| The excuse | Why it's wrong → what to do |
+|---|---|
+| "The event is defined in the spec, so it's instrumented." | Defined ≠ firing. Verify the event fires at the actual runtime point, not only in an idealized path (step 3). Confirm the trigger in code. |
+| "The happy path emits the event — that's the coverage." | Fallback / error / cancel paths that don't emit are invisible blind spots, and those are exactly where the funnel breaks (step 3). Confirm those paths fire or are explicitly out of scope. |
+| "The proxy event is basically the metric they want." | A proxy is not the outcome. Name the blind spot and don't imply business certainty the platform can't support (step 4). Document the limitation. |
+| "I'll pick a fresh, clearer event name." | A one-off name fragments funnels and breaks existing dashboards. Check naming against existing event conventions first (step 2) and reuse the convention. |

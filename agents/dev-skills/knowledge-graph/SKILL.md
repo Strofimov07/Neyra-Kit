@@ -92,6 +92,16 @@ insurance, not the mechanism.
 5. **Bridge.** If the touched code is in the knowledge-map manifest, update the
    mapped node in the same change; if it isn't but should be, add the mapping.
 
+## Common rationalizations (and why they're invalid)
+
+| The excuse | Why it's wrong → what to do |
+|---|---|
+| "I'll just add a paragraph to the nearest page." | Free-text sprawl is what the graph replaces. Find the single owner-node by type + layer contract; if none exists, "create one node," not "add a paragraph to whatever page" (Loop step 1). |
+| "It's quicker to restate the fact here than to link to it." | "Duplication is a defect, not redundancy" — a second copy drifts. One owner-node per fact; connect everything else with a typed edge (Rules). |
+| "I updated the doc; setting Last-verified / drift is bookkeeping." | An unstamped node can't be swept for staleness — the freshness engine runs on `Owner · Last-verified · drift-vs-code`. Stamp it, and set `drift-vs-code` honestly with its direction (Loop step 4). |
+| "I changed a mapped code file, but the doc's probably still fine." | Editing a file mapped in `knowledge-map` obliges updating the mapped node in the same change — the change isn't done until each touched node is updated or explicitly marked still-valid (Triggers 1). |
+| "I'll bulk-fix the wiki to match code in one pass." | Writes to the external canon are outward-facing — propose first, land after approval; never bulk-mutate the canon unprompted (Rules). |
+
 ## Rules
 
 - One owner-node per fact; everything else links. Duplication is a defect, not redundancy.

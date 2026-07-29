@@ -36,6 +36,15 @@ A structured spec (`docs/specs/YYYY-MM-DD-<topic>.md` or a Linear description):
   can reference it.
 - **Non-goals** · **Open questions** · **Constraints**
 
+## Common rationalizations (and why they're invalid)
+
+| The excuse | Why it's wrong → what to do |
+|---|---|
+| "I'll send all my questions at once to save round-trips." | The method is one question at a time, each answer informing the next (Method); a questionnaire dump gets shallow answers and misses the follow-ups that change the build. Ask one, then adapt. |
+| "I can reasonably assume what they mean here." | "Never proceed on an assumption you could have asked about" (Rules) — an unasked assumption becomes a silently-wrong requirement. Ask it. |
+| "The criteria read clearly in prose — EARS form is bureaucratic." | Acceptance criteria must be EARS-form and testable so each `SHALL` maps to a RED test (`test-first`) and a contract assertion (Rules). Prose criteria can't be tested against; write `WHEN … THE SYSTEM SHALL …` with IDs. |
+| "While I'm here I'll sketch the solution too." | "Don't design the solution here — that's `solution-designer`" (Rules). Stop at a developer-ready spec and hand off; solutioning inside elicitation biases the requirements. |
+
 ## Rules
 
 - One question at a time; never proceed on an assumption you could have asked about.
