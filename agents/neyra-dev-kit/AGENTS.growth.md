@@ -69,4 +69,4 @@ observable signal. Use standard analytics event names (Firebase/GA4 standard:
 - Typed-contract convention: {{CONTRACT_STACK}}
 - Linear workspace: {{LINEAR_WORKSPACE}} (every issue MUST have a project — see `linear-router`).
 
-<!-- kit-version: 0.28.0 -->
+<!-- kit-version: {{KIT_VERSION}} -->

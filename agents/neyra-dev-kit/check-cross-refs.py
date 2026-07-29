@@ -52,6 +52,17 @@ def main():
     root = _repo_root()
     skills_dir = os.path.join(root, "agents/dev-skills")
     if not os.path.isdir(skills_dir):
+        # AGENTS.md-section references are a dev-skill concern; a non-dev bundle
+        # (mgmt/product/growth) ships no agents/dev-skills, so the check is N/A, not a
+        # failure (NEB-1484). Fail closed only when NO skills layer exists at all.
+        others = [
+            d
+            for d in ("agents/mgmt-skills", "agents/product-skills")
+            if os.path.isdir(os.path.join(root, d))
+        ]
+        if others:
+            print("note: no agents/dev-skills — non-dev bundle; cross-ref check N/A")
+            return 0
         print(
             "FAIL: agents/dev-skills not found under %s — wrong location or broken "
             "install; refusing to pass vacuously." % root

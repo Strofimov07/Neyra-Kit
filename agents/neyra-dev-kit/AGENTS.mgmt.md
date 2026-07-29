@@ -44,4 +44,4 @@ are graded before new ones are written.
 - Metric sources / connectors: see `settings/CONNECTORS.md`
 - Reporting cadence: weekly pulse + monthly deep report (adjust per team)
 
-<!-- kit-version: 0.12.0 -->
+<!-- kit-version: {{KIT_VERSION}} -->

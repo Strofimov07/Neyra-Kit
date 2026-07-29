@@ -368,3 +368,33 @@ consumers, so a `doctor` call needs guarded warn-only wiring; tracked as a follo
 
 **Consequence.** The freshness checker now has an authored obligation feeding it. Doc-only;
 no gate or behavior change.
+
+## 2026-07-29 — doctor profile-aware + governance footer renders from VERSION (v0.34.4)
+
+**Context.** NEB-1484: a non-dev bundle (product/growth/mgmt) ships a different skills
+layer (`agents/{mgmt,product}-skills`, no `agents/dev-skills`) and none of the dev-only
+`pr-review-watch`/`security-review`. Running the installed `doctor.sh` in such a consumer
+failed three ways — surfaced by installing product + mgmt profiles into temp repos and
+running their doctor: (1) `test-portable-reviewers.py` raised `FileNotFoundError`;
+(2) the gate-hardening from v0.33.0/v0.34.2 (`check-skill-mapping`, `check-cross-refs`)
+fail-closed on a missing `agents/dev-skills` — a regression those PRs introduced for
+non-dev bundles; (3) the version-stamp check compared VERSION against each profile
+governance's own literal footer, which had drifted (product 0.4.0, growth 0.28.0, mgmt
+0.12.0) because only `AGENTS.devkit.md` ever got bumped.
+
+**Decision.**
+- `install.sh` stamps `kit=<profile>` in `.neyra-dev-kit.source`; `doctor.sh` runs the
+  portable-reviewer regression only for canonical or `kit=dev`, else notes a skip.
+- `check-skill-mapping.py` and `check-cross-refs.py` treat "no `agents/dev-skills` but
+  another skills layer present" as **N/A** (return 0); they still fail closed when NO
+  skills layer exists at all (preserves the NEB-1486 anti-vacuous-pass guard).
+- The governance footer is now `{{KIT_VERSION}}`, rendered from VERSION at install for
+  every profile, so a consumer's fragment always matches its installed version. `doctor`
+  accepts the unrendered placeholder in canon. **No manual per-release footer bump.**
+- `test-gate-resolution.py` no longer asserts the absence of "skip" (a non-dev bundle
+  legitimately skips layers it doesn't ship); exit code + the fail-closed case are the signal.
+
+**Consequence.** `doctor.sh` passes in temp product / mgmt / dev consumers (all verified),
+the reviewer test still fail-closes for dev/canonical, and the four governance footers can
+no longer drift. `test-check-skill-mapping.py` gains regressions for the non-dev-N/A and
+no-layer-fail paths.

@@ -153,13 +153,27 @@ def main():
     root = _repo_root()
     skills_dir = os.path.join(root, "agents/dev-skills")
     agents_dir = os.path.join(root, ".claude/agents")
-    if not os.path.isdir(skills_dir) or not os.path.isdir(agents_dir):
-        # Fail closed. Previously returned 0 ("skip"), so a standalone run from the
-        # wrong cwd — where these dirs didn't resolve — passed vacuously (NEB-1486).
-        # With root resolved from the script's own location, a real kit tree always
-        # has both; their absence means wrong location or broken install.
-        print("FAIL: agents/dev-skills and/or .claude/agents not found under %s — "
-              "wrong location or broken install; refusing to pass vacuously." % root)
+    if not os.path.isdir(skills_dir):
+        # A non-dev bundle (mgmt/product/growth) ships its own skills layer and no
+        # agents/dev-skills — there is nothing to map, so this check is N/A, not a
+        # failure (NEB-1484). Fail closed only when NO skills layer exists at all
+        # (wrong cwd or broken tree), which would otherwise pass vacuously (NEB-1486).
+        others = [
+            d
+            for d in ("agents/mgmt-skills", "agents/product-skills")
+            if os.path.isdir(os.path.join(root, d))
+        ]
+        if others:
+            print(
+                "note: no agents/dev-skills — non-dev bundle (%s); skill↔subagent map N/A"
+                % ", ".join(os.path.basename(x) for x in others)
+            )
+            return 0
+        print("FAIL: no skill layer (agents/dev-skills|mgmt-skills|product-skills) under "
+              "%s — wrong location or broken install; refusing to pass vacuously." % root)
+        return 1
+    if not os.path.isdir(agents_dir):
+        print("FAIL: .claude/agents not found under %s — broken install." % root)
         return 1
 
     dev_skills = {
