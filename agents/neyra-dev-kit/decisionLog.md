@@ -350,3 +350,21 @@ the full `doctor.sh` run with a regression test, and copied to consumers by `ins
 **Consequence.** A fresh consumer's `kit-evolution` routing targets all exist, and a future
 dead anchor fails `doctor` instead of silently no-opping. The third unvalidated version
 copy is gone. Full-run only; the Stop gate stays `--fast`.
+
+## 2026-07-29 — auto-memory freshness in the Self-Improvement loop (v0.34.3)
+
+**Context.** NEB-1366's port already landed — `knowledge/memory_freshness.py` (generic:
+memory dir from arg → `CLAUDE_MEMORY_DIR` → CWD, no hardcoded path) and `check_code_node.py`
+are in kit-source, and the freshness contract (`Owner · Last-verified · drift-vs-code ·
+Cadence`) lives in the `knowledge-graph` skill. The one open non-optional item: the
+Self-Improvement Rule didn't connect auto-memory to that contract, so a changed fact could
+be re-stored without re-stamping `last_verified` and the checker couldn't sweep it.
+
+**Decision.** Extend the Self-Improvement Rule (shipped governance template) so auto-memory
+is part of the loop: on a fact change, update the node AND re-stamp `last_verified`, so
+`memory_freshness.py` can flag staleness. The optional Stop-gate/`doctor` enforcement is
+deferred by design — the memory layer is CWD/env-resolved and absent in canon and most
+consumers, so a `doctor` call needs guarded warn-only wiring; tracked as a follow-up if wanted.
+
+**Consequence.** The freshness checker now has an authored obligation feeding it. Doc-only;
+no gate or behavior change.

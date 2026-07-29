@@ -15,6 +15,8 @@ When work surfaces a repeatable mistake, a skipped gate, a gate that fired on a 
 
 A signal that lives only in the conversation evaporates. Don't wait for a retro.
 
+Auto-memory is durable knowledge, not scratch: when work changes a fact you've stored, update its memory node **and** re-stamp `last_verified` in the same turn (the `knowledge-graph` freshness contract — `Owner · Last-verified · drift-vs-code`), so `agents/neyra-dev-kit/knowledge/memory_freshness.py` can sweep it for staleness. An unstamped node rots silently.
+
 ## Current lessons
 
 Patterns promoted from `signals.log` after they recurred or proved costly. Keep each to a few lines — this section is read every session.
