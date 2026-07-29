@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Regression tests for canonical vs consumer skill-mapping checks."""
 
+import contextlib
 import importlib.util
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -39,6 +41,36 @@ class SkillMappingModeTests(unittest.TestCase):
 
             self.assertEqual(len(errors), 1)
             self.assertIn("mapping table", errors[0])
+
+
+class ProfileAwareTests(unittest.TestCase):
+    """NEB-1484: main() is profile-aware — a non-dev bundle (no agents/dev-skills but
+    another skills layer present) is N/A, not a failure; only a total absence of any
+    skills layer fails closed."""
+
+    def _main_with_root(self, root):
+        orig = MODULE._repo_root
+        MODULE._repo_root = lambda: str(root)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                return MODULE.main()
+        finally:
+            MODULE._repo_root = orig
+
+    def test_non_dev_bundle_is_na_not_fail(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            skill = root / "agents" / "mgmt-skills" / "team-health-check"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text("---\nname: team-health-check\n---\n", encoding="utf-8")
+            (root / ".claude" / "agents").mkdir(parents=True)
+            self.assertEqual(0, self._main_with_root(root))
+
+    def test_no_skill_layer_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".claude" / "agents").mkdir(parents=True)  # no skills layer at all
+            self.assertEqual(1, self._main_with_root(root))
 
 
 if __name__ == "__main__":

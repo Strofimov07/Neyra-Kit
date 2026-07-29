@@ -66,19 +66,26 @@ else
   echo "note: decisionLog.md is canonical-source history and is not copied to consumers"
 fi
 
-# NEB-1375: the governance fragment's version footer must match VERSION —
-# a stale footer means the fragment (or the stamp) didn't ship with the bump.
+# NEB-1375 / NEB-1484: the governance fragment's version footer must match VERSION.
+# The footer renders from VERSION at install ({{KIT_VERSION}}), so every consumer's
+# fragment matches its installed version across all profiles and no manual per-release
+# footer bump is needed. In the canonical repo the template is read raw, so the
+# unrendered placeholder is the expected, correct state.
 echo "── version stamp"
 ver="$(cat "$KIT/VERSION")"
 checked=0
 for gf in "$KIT/AGENTS.devkit.md" "$ROOT/AGENTS.neyra-devkit.md"; do
   [ -f "$gf" ] || continue
   checked=1
+  if grep -q 'kit-version: {{KIT_VERSION}}' "$gf"; then
+    echo "ok: $(basename "$gf") footer renders VERSION at install ({{KIT_VERSION}})"
+    continue
+  fi
   foot="$(grep -o 'kit-version: [0-9][0-9.]*' "$gf" | head -1 | cut -d' ' -f2)"
   if [ "$foot" = "$ver" ]; then
     echo "ok: $(basename "$gf") footer matches VERSION ($ver)"
   else
-    echo "FAIL: $(basename "$gf") footer says '${foot:-none}' but VERSION is '$ver' — update the footer with the bump (EVOLVING-THE-KIT §4)"
+    echo "FAIL: $(basename "$gf") footer says '${foot:-none}' but VERSION is '$ver' — footer should be {{KIT_VERSION}} (rendered at install) or match VERSION"
     fail=1
   fi
 done
@@ -119,7 +126,19 @@ if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; t
 fi
 run "skills lint"          python3 "$KIT/lint-skills.py"
 run "skill-mapping regression" python3 "$KIT/test-check-skill-mapping.py"
-run "portable-reviewer regression" python3 "$KIT/test-portable-reviewers.py"
+# NEB-1484: the portable-reviewer regression validates pr-review-watch + security-review —
+# dev-only skills a non-dev bundle (product/growth/mgmt) does not ship. Run it only where
+# they are expected: the canonical repo, or a consumer whose installed kit is `dev`
+# (recorded as kit= in .neyra-dev-kit.source). Elsewhere it would FileNotFoundError into a
+# false-negative doctor result.
+kit_profile=""
+[ -f "$ROOT/.neyra-dev-kit.source" ] && kit_profile="$(sed -n 's/^kit=//p' "$ROOT/.neyra-dev-kit.source" | head -1)"
+if [ -f "$ROOT/.neyra-kit-canonical" ] || [ "$kit_profile" = "dev" ]; then
+  run "portable-reviewer regression" python3 "$KIT/test-portable-reviewers.py"
+else
+  echo "── portable-reviewer regression"
+  echo "note: skip — non-dev bundle (kit='${kit_profile:-unspecified}') ships no pr-review-watch/security-review"
+fi
 run "skill↔subagent map"   python3 "$KIT/check-skill-mapping.py"
 run "plans lint"           python3 "$KIT/lint-plans.py"
 run "bundled-skill egress" python3 "$KIT/check-egress.py"
