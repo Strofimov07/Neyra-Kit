@@ -9,7 +9,7 @@ Portable engineering skill stack for **every Neyra-adjacent repo** (TradingCoreM
 - the portable subagents in `.claude/agents/` (the auto-invocable surface for those skills — see the `AGENTS.devkit.md` map)
 
 **Layer B — templated (rendered per repo).** Encode each repo's conventions via config:
-- `linear-router` — the repo's Linear projects + routing table
+- `linear-router` — the repo's Linear projects + routing table + approved label taxonomy (label hygiene: reuse-before-create, one axis per label)
 - `localization-checker` — the repo's required locales + i18n mechanism
 - `contract-checker` — the repo's typed-contract convention
 

@@ -184,3 +184,32 @@ consumer `AGENTS.include` template. The skill reference and its landing zone now
 state and are overwritten by `install.sh`. The widened workflow trigger makes the
 freshness job run on every PR — this is intentional, since the script itself reports
 `no mapped paths touched` and the step is non-blocking.
+
+## 2026-07-29 — linear-router gains label hygiene (v0.32.0)
+
+**Context.** A Linear workspace was found to have accreted a label mess: two naming
+conventions side by side (Capitalized bare `Bug`/`Feature`/`Improvement` vs lowercase
+`prefix:value`), Linear's seed labels left undescribed, no real label groups (the `:` in
+names only imitates grouping), and colors reused across unrelated axes. Labels are a
+controlled vocabulary, but the kit had no rule governing them — `linear-router` enforced
+project-required and defect-based dedup, yet said nothing about labels — so drift was
+inevitable wherever the router is installed.
+
+**Decision.** Extend the `linear-router` template with a **Label hygiene** section:
+reuse-before-create (match by meaning via `list_issue_labels`, not by string), one axis
+per label from an approved set, a required one-line description, naming and color fixed by
+the axis, and propose-don't-proliferate (a new label or axis is an approved proposal, never
+a silent mid-issue creation; superseded labels are marked `obsolete`/archived). Mutually-
+exclusive axes (type, status) are Linear **label groups**; cross-cutting marks stay
+`flag:value`. The concrete taxonomy is delegated to a new `{{LINEAR_LABELS}}` placeholder
+rendered from consumer config — the skill owns the shape, `settings/` owns the label set,
+per the scoping rule. `list_issue_labels` is added to the router's tool set for the
+reuse check.
+
+**Consequence.** The router now gates labels at create/relabel time and can drive a
+cleanup pass, but never deletes or bulk-relabels without per-item approval. Consumers
+declare their approved axes and labels in the install config (`LINEAR_LABELS`); leaving it
+empty keeps the generic rules with no enumerated set, so nothing breaks on upgrade. The
+example configs carry a generic `type`/`status`/`area`/flags taxonomy with `area:*` left
+for the consumer to fill. Migrating an existing workspace's labels into groups is a
+separate, human-approved action against the live tracker, not part of this kit change.
