@@ -251,6 +251,30 @@ else
   fail=1
 fi
 
+echo "── goal-mode gate smoke"
+# NEB-1589: the checkpoint-1 gate must block Task/Workflow dispatch while awaiting
+# approval, allow once approved, and never fire when goal-mode is inactive (no gate).
+gdir="$(mktemp -d)"; mkdir -p "$gdir/.neyra"
+printf 'awaiting-checkpoint-1\n' > "$gdir/.neyra/goal-mode.gate"
+if printf '{"tool_input":{"subagent_type":"implementation-loop"}}' | CLAUDE_PROJECT_DIR="$gdir" "$KIT/hooks/count-task.sh" >/dev/null 2>&1; then
+  echo "FAIL: goal-mode gate did not block dispatch while awaiting checkpoint 1"; fail=1
+else
+  echo "ok: goal-mode gate blocks dispatch while awaiting checkpoint 1"
+fi
+printf 'approved\n' > "$gdir/.neyra/goal-mode.gate"
+if printf '{"tool_input":{"subagent_type":"implementation-loop"}}' | CLAUDE_PROJECT_DIR="$gdir" "$KIT/hooks/count-task.sh" >/dev/null 2>&1; then
+  echo "ok: goal-mode gate allows dispatch after checkpoint 1 approved"
+else
+  echo "FAIL: goal-mode gate blocked dispatch after approval"; fail=1
+fi
+rm -f "$gdir/.neyra/goal-mode.gate"
+if printf '{"tool_input":{"subagent_type":"implementation-loop"}}' | CLAUDE_PROJECT_DIR="$gdir" "$KIT/hooks/count-task.sh" >/dev/null 2>&1; then
+  echo "ok: no gate → normal dispatch (no false positive)"
+else
+  echo "FAIL: dispatch blocked with no goal-mode gate present (false positive)"; fail=1
+fi
+rm -rf "$gdir"
+
 echo ""
 if [ "$fail" -eq 0 ]; then echo "doctor: OK"; else echo "doctor: FAILURES above"; fi
 exit "$fail"

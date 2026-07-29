@@ -421,3 +421,25 @@ kit's own `agents/neyra-dev-kit/` tree (where the drift occurs and no user files
 skill/agent mirrors already self-prune via `rsync --delete`, and single files (governance,
 hooks configs) are overwritten each install. `test-retire.py` installs into a temp repo and
 asserts RET-1/2/3/5; canonical-only in `doctor.sh`.
+
+## 2026-07-30 — goal-mode checkpoint-1 enforced by a hook (v0.34.6)
+
+**Context.** NEB-1589 (split from NEB-1588, which fixed only the prose half): goal-mode's
+"checkpoints are mandatory" was exhortation, not enforcement — nothing under
+`hooks/` knew about goal-mode, so nothing stopped a dispatch before checkpoint-1 approval.
+That is exactly the skip-under-pressure the kit's own rule says to enforce over exhort.
+
+**Decision.** A gate file `.neyra/goal-mode.gate` carries the run phase: the goal-mode skill
+arms it `awaiting-checkpoint-1` on entry (step 1), flips it to `approved` at checkpoint 1
+(step 3), and removes it on stop (step 8). The PreToolUse hook `count-task.sh` — now wired on
+`Task|Workflow` — blocks any dispatch while the gate reads `awaiting-checkpoint-1`. The four
+design questions from the issue: (1) active-and-unapproved is read from the gate *content*,
+not mere run presence; (2) it blocks `Task` and `Workflow` dispatch (both paths) and nothing
+else; (3) it is **Claude-Code-only** — Cursor/Codex dispatch differently and rely on the
+protocol prose, named explicitly in the skill; (4) a gate older than 6h is treated as stale
+and ignored (fail-open) so a crashed run can't wedge normal work, and the block message says
+how to clear it. No gate = not goal-mode = normal dispatch, never blocked (no false positives).
+
+**Consequence.** Checkpoint 1 is enforced, not hoped for, on Claude Code. A canonical
+`doctor.sh` smoke asserts block-while-awaiting / allow-after-approval /
+no-false-positive-when-inactive. Cursor/Codex enforcement stays protocol-prose (documented).
