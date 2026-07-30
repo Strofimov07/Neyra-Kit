@@ -21,6 +21,8 @@
 #   FIREBASE_MCP_TOOLS           exact tool allowlist used by the limited profile
 #   FIREBASE_MCP_FEATURES        complete feature-group list used by the explicit full profile
 #   ENABLE_CURSOR_SKILLS         0/1  (symlink dev-skills into .cursor/skills/ for Cursor)
+#   ENABLE_BUNDLED_SKILLS        0/1  (dev kit's web/UI design skills → .claude/skills/; default 1.
+#                                Set 0 for a headless repo with no UI — skips ~2.7M / 149 files.)
 #   LINEAR_MCP_PREFIX            your Linear MCP server-instance id, e.g. mcp__<hash> (find it in Claude Code via /mcp).
 #                                Per-user — a friend MUST set their own. Empty → linear-router is skipped (not installed broken).
 #

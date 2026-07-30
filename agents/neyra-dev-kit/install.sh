@@ -57,7 +57,7 @@ fi
 
 # Defaults; overridden by config.
 ENABLE_LINEAR_ROUTER=1; ENABLE_LOCALIZATION_CHECKER=1; ENABLE_CONTRACT_CHECKER=1
-ENABLE_NEYRA_MCP=0; ENABLE_FIREBASE_MCP=0; ENABLE_CURSOR_SKILLS=1; ENABLE_HOOKS=1
+ENABLE_NEYRA_MCP=0; ENABLE_FIREBASE_MCP=0; ENABLE_CURSOR_SKILLS=1; ENABLE_HOOKS=1; ENABLE_BUNDLED_SKILLS=1
 REPO_NAME=""; STACK=""; BUILD_VERIFY_CMD=""; LOCALES=""; I18N_MECHANISM=""
 CONTRACT_STACK=""; LINEAR_WORKSPACE=""; LINEAR_ROUTING=""; LINEAR_LABELS=""
 # Linear MCP server-instance prefix the linear-router's tools resolve against. This is
@@ -314,7 +314,7 @@ fi
 # Manifest opt-in (BUNDLED_SKILLS_SRC, set only by kits that ship them). The canonical dir is also
 # copied into the target's portable layer so the consumer's session-start hook can re-sync it.
 # Synced BEFORE project skills below so a same-named settings/skills/ entry overrides it (project > bundled).
-if [[ -n "${BUNDLED_SKILLS_SRC:-}" && -d "$SOURCE_ROOT/$BUNDLED_SKILLS_SRC" ]]; then
+if [[ "${ENABLE_BUNDLED_SKILLS:-1}" == "1" && -n "${BUNDLED_SKILLS_SRC:-}" && -d "$SOURCE_ROOT/$BUNDLED_SKILLS_SRC" ]]; then
   echo "Bundled skills — $BUNDLED_SKILLS_SRC → .claude/skills/:"
   CANON_BUNDLED="$SOURCE_ROOT/$BUNDLED_SKILLS_SRC"
   do_ "mkdir -p '$TARGET/$BUNDLED_SKILLS_SRC' '$TARGET/.claude/skills'"
@@ -341,6 +341,9 @@ if [[ -n "${BUNDLED_SKILLS_SRC:-}" && -d "$SOURCE_ROOT/$BUNDLED_SKILLS_SRC" ]]; 
     bs=$((bs+1))
   done
   say "synced $bs bundled skill(s) → .claude/skills/ (source: $BUNDLED_SKILLS_SRC; .claude copy generated — never hand-edit)"
+elif [[ -n "${BUNDLED_SKILLS_SRC:-}" ]]; then
+  # NEB-1652: the dev manifest ships design skills, but a headless repo (no UI) can opt out.
+  say "bundled skills disabled (ENABLE_BUNDLED_SKILLS=0) — $BUNDLED_SKILLS_SRC not installed for this repo"
 fi
 
 # Project-owned skills: settings/skills/<id>/ (tracked, kit never authors) → .claude/skills/<id>/

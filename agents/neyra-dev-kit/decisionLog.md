@@ -560,3 +560,20 @@ is a consumer fact in `settings/` (no version hardcoded).
 **Consequence.** The green-local-`npm ci` failure mode now has a checkable gate and a named
 excuse. Verified: the grep-check distinguishes a CI-green lock (≥1) from a macOS-regen one
 (0); `lint-scope` stays green (no project facts leaked); `lint-skills` clean.
+
+## 2026-07-30 — ENABLE_BUNDLED_SKILLS per-repo toggle (v0.37.0)
+
+**Context.** NEB-1652: `manifests/dev.sh` sets `BUNDLED_SKILLS_SRC=agents/design-skills` at
+the **kit** level, so every dev-kit consumer received 16 web/UI design skills (2.7M, 149
+files) whether or not it has any UI — inert weight and list-noise in a headless repo (e.g.
+a Go trading runtime). Other install surfaces (`ENABLE_LOCALIZATION_CHECKER`,
+`ENABLE_CONTRACT_CHECKER`, `ENABLE_CURSOR_SKILLS`) are already per-repo; bundled skills were
+the exception.
+
+**Decision.** Add `ENABLE_BUNDLED_SKILLS` (default 1, behavior-preserving) to the install
+config. The bundled-skills copy is gated on it; a headless repo sets 0 and the installer
+reports the skip. Documented in `config.example.yml`.
+
+**Consequence.** A UI-less consumer opts out of ~2.7M / 149 files with one config line;
+default installs are unchanged. Verified: dev install with the toggle 0 → no
+`agents/design-skills` and a "disabled" note; default → 16 skills synced; `doctor: OK`.
