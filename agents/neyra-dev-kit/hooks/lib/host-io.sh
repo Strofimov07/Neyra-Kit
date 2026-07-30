@@ -79,7 +79,7 @@ for line in cmd.splitlines():
     if match:
         add(match.group(1))
 
-if not paths:
+if not paths and re.search(r"\bapply_patch\b", cmd):
     for line in cmd.splitlines():
         match = re.match(r"(?:\+\+\+|---)\s+(.+)$", line)
         if not match:

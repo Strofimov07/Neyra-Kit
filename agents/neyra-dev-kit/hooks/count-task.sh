@@ -18,7 +18,7 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$DIR/lib/host-io.sh"
+. "$DIR/lib/host-io.sh" 2>/dev/null || exit 0
 nk_load
 
 ROOT_DIR="${CLAUDE_PROJECT_DIR:-$(cd "$DIR/../../.." && pwd)}"

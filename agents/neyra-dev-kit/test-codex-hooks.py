@@ -131,6 +131,7 @@ class CodexHookConfigTests(unittest.TestCase):
             root = pathlib.Path(tmp)
             (root / "first.py").write_text("x=1\n", encoding="utf-8")
             (root / "second.py").write_text("y=2\n", encoding="utf-8")
+            (root / "ruff.toml").write_text("", encoding="utf-8")  # config-gate (NEB-1650 #1): repo opted in
             bin_dir = root / "bin"
             bin_dir.mkdir()
             log = root / "ruff.log"
@@ -166,6 +167,7 @@ class CodexHookConfigTests(unittest.TestCase):
                     **os.environ,
                     "NEYRA_HOOK_HOST": "codex",
                     "NEYRA_RUFF_LOG": str(log),
+                    "CLAUDE_PROJECT_DIR": str(root),  # ROOT_DIR for has_cfg (NEB-1650 #1)
                     "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
                 },
             )

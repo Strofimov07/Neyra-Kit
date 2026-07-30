@@ -510,3 +510,31 @@ section absent from all three still WARNs — not evergreen.
 **Consequence.** No more false-WARN in consumers; the check stays meaningful. Verified by
 `test-cross-refs.py` (consumer layout, both directions) and empirically on a dev-consumer
 install (`doctor` without the WARN). Patch bump.
+
+## 2026-07-30 — port six hook robustness fixes upstream (v0.36.0)
+
+**Context.** NEB-1650: six hook defects were fixed only locally in the TradingCoreModules
+consumer because the hooks fire on every tool-call for anyone cloning the repo — none
+reached canonical Neyra-Kit, so every kit upgrade silently reverted them. The kit's own
+doctrine ("shared behavior is never authored in a product repository") makes the defect the
+fact that these lived downstream.
+
+**Decision.** Port all six to canon: (1) `post-tool-use-format` formats only when the repo
+has a formatter config (`has_cfg` over pyproject.toml/ruff.toml/.ruff.toml/setup.cfg,
+.swiftformat, .prettierrc*) — without it the hook imposed the tool's default style on a repo
+that never opted in (79/146 tracked `.py` rewritten from a one-line edit). (2) It only
+touches files inside the repo — a caller's absolute path could point anywhere. (3) All five
+hooks guard the shim source (`. lib/host-io.sh 2>/dev/null || exit 0`) — without it a missing
+shim made `stop-gate` exit 127 and block the agent. (4) The `host-io` bare `+++`/`---`
+fallback is bound to an actual `apply_patch` invocation, so a read-only `git apply` diff is
+no longer misread as an edit, while a real `apply_patch` (with or without the `*** Begin
+Patch` envelope) still blocks. (5) The guard's block message points at re-installing from
+canon (a consumer has no `install.sh`). (6) `check_code_node` catches `FileNotFoundError` in
+both `default_base()` guards and `changed_files()` — it crashed with a traceback when git
+was absent from PATH.
+
+**Consequence.** The six fixes now live upstream and survive every upgrade; consumers can
+drop their local re-patching. Each verified before/after (config-gated formatting,
+external-path skip, missing-shim → exit 0, read-only `git apply` allowed + `apply_patch`
+blocked both ways, graceful no-git). `test-codex-hooks.py` updated for the config gate;
+`doctor: OK`.

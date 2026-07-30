@@ -15,7 +15,7 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$DIR/lib/host-io.sh"
+. "$DIR/lib/host-io.sh" 2>/dev/null || exit 0
 CORE="$DIR/../KIT_BOOTSTRAP.md"
 [ -f "$CORE" ] || exit 0
 
