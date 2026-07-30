@@ -465,3 +465,29 @@ the `{{KIT_VERSION}}` render.
 
 **Consequence.** The two failure modes that recurred this session now have a named rule the
 next run trips over, not just hindsight. Prose/rule-only; no code or gate behaviour change.
+
+## 2026-07-30 — installer reconciles kit-owned blocks on upgrade (v0.35.0)
+
+**Context.** NEB-1651 + NEB-1648, both found upgrading a real consumer (Pravo/TCM) to
+0.34.7. `install.sh` copied files idempotently, but two kit-owned *in-place* blocks were
+written once and never updated: the `AGENTS.md` inline governance block (skipped if its
+heading was present) and the `.claude/settings.json` hook wiring (skipped if any kit hook
+was present). On upgrade this meant new template sections — the `Current lessons` landing
+zone `kit-evolution` routes promoted rules to — never reached consumers, and the v0.34.6
+goal-mode `Task|Workflow` hook matcher arrived **inert** (the enforcement shipped that same
+day did not actually reach an upgraded consumer).
+
+**Decision.** Both blocks reconcile in place. The `AGENTS.md` block is wrapped in
+`<!-- neyra-dev-kit:begin/end -->` markers and its content replaced between them on every
+install; an unmarked legacy block is migrated once (replace from its first managed heading
+to EOF); repo content outside the markers is untouched; a managed heading the repo also
+owns outside the block is reported, not clobbered; `--dry-run` prints the diff. The
+`settings.json` hooks reconcile via `jq`: per event, drop existing kit-owned hook groups
+(command references `neyra-dev-kit/hooks`) and add the current ones, preserving the
+consumer's own hooks. Both are idempotent.
+
+**Consequence.** An upgraded consumer now receives current governance sections and current
+hook wiring — kit changes stop arriving inert. Verified empirically (fresh → drift →
+upgrade, consumer content preserved) and by `test-reconcile.py` (reconcile + legacy
+migration), canonical-only in `doctor.sh`. This closes the exact gap that neutered the
+goal-mode enforcement on the Pravo upgrade.
