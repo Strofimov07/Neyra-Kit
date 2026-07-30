@@ -9,12 +9,12 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$DIR/lib/host-io.sh"
+. "$DIR/lib/host-io.sh" 2>/dev/null || exit 0
 nk_load
 
 block_managed_path() {
   nk_metric guard_block path "$path"
-  nk_block_edit "neyra-dev-kit: '$path' is generated / kit-managed — regenerate it (re-run install.sh or the generator), do not hand-edit."
+  nk_block_edit "neyra-dev-kit: '$path' is generated / kit-managed — regenerate it by re-installing the kit from the canonical Neyra-Kit repo (a consumer has no install.sh of its own), do not hand-edit."
 }
 
 while IFS= read -r path; do

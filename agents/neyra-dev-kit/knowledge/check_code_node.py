@@ -48,7 +48,7 @@ def default_base():
         ).strip()
         if head:
             candidates.append(head)
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         pass
     candidates += [
         "origin/main",
@@ -63,7 +63,7 @@ def default_base():
             return subprocess.check_output(
                 ["git", "merge-base", "HEAD", ref], text=True, stderr=subprocess.DEVNULL
             ).strip()
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, FileNotFoundError):
             continue
     return "HEAD~1"
 
@@ -78,7 +78,7 @@ def changed_files(args):
         cmd = ["git", "diff", "--name-only", base]
     try:
         out = subprocess.check_output(cmd, text=True)
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
         print(f"git diff failed: {e}", file=sys.stderr)
         return []
     return [l.strip() for l in out.splitlines() if l.strip()]

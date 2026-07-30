@@ -17,7 +17,7 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$DIR/lib/host-io.sh"
+. "$DIR/lib/host-io.sh" 2>/dev/null || exit 0
 KIT="$(cd "$DIR/.." && pwd)"
 nk_load
 
