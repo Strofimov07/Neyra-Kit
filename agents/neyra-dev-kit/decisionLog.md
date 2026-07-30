@@ -538,3 +538,25 @@ drop their local re-patching. Each verified before/after (config-gated formattin
 external-path skip, missing-shim → exit 0, read-only `git apply` allowed + `apply_patch`
 blocked both ways, graceful no-git). `test-codex-hooks.py` updated for the config gate;
 `doctor: OK`.
+
+## 2026-07-30 — npm-lock CI-parity rules in verify-runtime / pr-hygiene (v0.36.1)
+
+**Context.** NEB-1649: three signals from a real consumer (Pravo miniapp frontend) with one
+root — a `package-lock.json` generated on the dev machine lies about CI. A macOS-built lock
+omits the Linux native-binding `packages` entries (rollup/esbuild), so `npm ci` on CI-Linux
+can't find them; a newer local npm dedupes differently than CI's; and a `^`-ranged engine
+with a native binding (vitest → rolldown) minor-bumps on regen. `verify-runtime` passed this
+whole class (a green local `npm ci` is not a green CI).
+
+**Decision.** Add **checkable** steps, not "be careful" prose. `verify-runtime` step 3 + a
+rationalization row: a green local `npm ci` is not proof; reproduce CI's npm
+(`npx npm@<CI ver> ci`) or grep the Linux binding entry. `pr-hygiene` step 9 + a
+rationalization row: don't regenerate the lock from scratch on the dev OS; base off the
+CI-green lock and `npm install --package-lock-only`; pin native-binding engines to the
+CI-green version; pre-push `grep -c '"node_modules/@rollup/rollup-linux-x64-gnu"'
+package-lock.json` ≥ 1. Scoping honored: the mechanic lives in the skills; CI's npm version
+is a consumer fact in `settings/` (no version hardcoded).
+
+**Consequence.** The green-local-`npm ci` failure mode now has a checkable gate and a named
+excuse. Verified: the grep-check distinguishes a CI-green lock (≥1) from a macOS-regen one
+(0); `lint-scope` stays green (no project facts leaked); `lint-skills` clean.

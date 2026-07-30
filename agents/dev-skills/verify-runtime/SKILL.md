@@ -51,6 +51,12 @@ Prove that the shipped change works on the real surface, not only in static anal
   same backend CI uses or against an explicit fresh mock — and state which. Local
   fallbacks (in-memory limiter, in-memory store) hide what only the real backend shows:
   state surviving between tests, FK constraints.
+- For a Node/JS surface, a green **local** `npm ci` is not proof: a `package-lock.json`
+  built on the dev OS omits the Linux native-binding entries CI installs (rollup / esbuild
+  / rolldown), and a newer local npm dedupes the tree differently than CI's. Reproduce CI's
+  npm — `npx npm@<CI npm version> ci` (the CI npm version is a consumer fact; see
+  `settings/`) — or confirm the lock carries the Linux binding, e.g.
+  `grep -c '"node_modules/@rollup/rollup-linux-x64-gnu"' package-lock.json` ≥ 1.
 
 **Success criteria**
 - The changed behavior is observed on a real surface or contract boundary.
@@ -78,6 +84,7 @@ Prove that the shipped change works on the real surface, not only in static anal
 | "I'll verify after merge." | After merge it's a production incident, not a check. Verify before closing. |
 | "The targeted tests I ran are green." | Targeted scope proves the lines you touched, not the mocks and callers still assuming the old shape. Widen before pushing. |
 | "It's green locally, CI will match." | Local fallbacks (in-memory store/limiter) are not the CI backend. Same backend or an explicit fresh mock — otherwise CI is your first real run. |
+| "Local `npm ci` passed — the lock is fine." | A lock generated on macOS omits the Linux native-binding entries (rollup/esbuild) CI installs from, and a newer local npm dedupes differently. Reproduce CI's npm (`npx npm@<CI ver> ci`) or grep the `@rollup/rollup-linux-x64-gnu` entry before trusting green. |
 
 ## Rules
 
