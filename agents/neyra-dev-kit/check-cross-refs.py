@@ -73,30 +73,49 @@ def main():
         os.path.join(root, ".neyra-dev-kit.source")
     ) and not os.path.isfile(os.path.join(root, ".neyra-kit-canonical"))
 
-    # Resolve against the governance the kit ships: the template in canon, the rendered
-    # include in a consumer.
-    template = os.path.join(root, "agents/neyra-dev-kit/templates/AGENTS.include.md.tmpl")
-    installed = os.path.join(root, "AGENTS.neyra-devkit.md")
-    target = template if os.path.isfile(template) else (installed if os.path.isfile(installed) else None)
-    if target is None:
-        print("note: no AGENTS governance doc found (template or installed) — skip cross-ref check")
-        return 0
+    if is_consumer:
+        # In a consumer the referenced sections live in the repo's own AGENTS.md / CLAUDE.md —
+        # install.sh appends the kit block there, not into AGENTS.neyra-devkit.md (that render
+        # is built from $GOVERNANCE_TMPL and carries no such sections by construction). A skill
+        # that says "`X` in AGENTS.md" means AGENTS.md, so resolve against the union of all
+        # three (NEB-1647). A consumer may rename its headings → warn, never fail.
+        sources = [
+            os.path.join(root, f)
+            for f in ("AGENTS.md", "CLAUDE.md", "AGENTS.neyra-devkit.md")
+            if os.path.isfile(os.path.join(root, f))
+        ]
+        if not sources:
+            print("note: no AGENTS.md/CLAUDE.md/AGENTS.neyra-devkit.md — skip cross-ref check")
+            return 0
+        headings = set()
+        for p in sources:
+            with open(p, encoding="utf-8") as fh:
+                headings |= headings_of(fh.read())
+        target_label = ", ".join(os.path.basename(p) for p in sources)
+    else:
+        # Canonical: resolve against the shipped governance template; a dead anchor fails.
+        template = os.path.join(root, "agents/neyra-dev-kit/templates/AGENTS.include.md.tmpl")
+        installed = os.path.join(root, "AGENTS.neyra-devkit.md")
+        target = template if os.path.isfile(template) else (installed if os.path.isfile(installed) else None)
+        if target is None:
+            print("note: no AGENTS governance doc found (template or installed) — skip cross-ref check")
+            return 0
+        with open(target, encoding="utf-8") as fh:
+            headings = headings_of(fh.read())
+        target_label = os.path.relpath(target, root)
 
-    with open(target, encoding="utf-8") as fh:
-        headings = headings_of(fh.read())
     problems = [(d, name) for (d, name) in scan_skill_refs(skills_dir) if name not in headings]
 
-    rel = os.path.relpath(target, root)
     if problems:
         label = "WARN" if is_consumer else "FAIL"
         mark = "!" if is_consumer else "x"
-        print("%s dead AGENTS.md section anchor(s) — not a heading in %s:" % (label, rel))
+        print("%s dead AGENTS.md section anchor(s) — not a heading in %s:" % (label, target_label))
         for d, name in problems:
             print("   %s agents/dev-skills/%s/SKILL.md -> `%s`" % (mark, d, name))
         return 0 if is_consumer else 1
 
     mode = " [consumer: warn-only]" if is_consumer else ""
-    print("ok: all dev-skill AGENTS.md section refs resolve in %s%s" % (rel, mode))
+    print("ok: all dev-skill AGENTS.md section refs resolve in %s%s" % (target_label, mode))
     return 0
 
 

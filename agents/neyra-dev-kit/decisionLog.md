@@ -491,3 +491,22 @@ hook wiring — kit changes stop arriving inert. Verified empirically (fresh →
 upgrade, consumer content preserved) and by `test-reconcile.py` (reconcile + legacy
 migration), canonical-only in `doctor.sh`. This closes the exact gap that neutered the
 goal-mode enforcement on the Pravo upgrade.
+
+## 2026-07-30 — check-cross-refs resolves against AGENTS.md in consumers (v0.35.1)
+
+**Context.** NEB-1647: the cross-ref lint (shipped v0.34.2) resolved anchors in a consumer
+against `AGENTS.neyra-devkit.md`, but the referenced sections (`Self-Improvement Rule`,
+`Current lessons`) live in the repo's own `AGENTS.md` — `install.sh` appends the kit block
+there, while the render is built from `$GOVERNANCE_TMPL` and carries no such sections.
+Result: a guaranteed false-WARN in every dev consumer (found upgrading Pravo). The canonical
+check was green because it resolves against the template — the exact "test the gate on every
+profile / a real consumer" gap promoted to a rule the same day (EVOLVING-THE-KIT §5).
+
+**Decision.** In consumer mode, resolve against the union of `AGENTS.md` + `CLAUDE.md` +
+`AGENTS.neyra-devkit.md` (a skill saying "`X` in AGENTS.md" means AGENTS.md); warn, never
+fail (a consumer may rename headings). Canon unchanged (template, fail on a dead anchor). A
+section absent from all three still WARNs — not evergreen.
+
+**Consequence.** No more false-WARN in consumers; the check stays meaningful. Verified by
+`test-cross-refs.py` (consumer layout, both directions) and empirically on a dev-consumer
+install (`doctor` without the WARN). Patch bump.
