@@ -33,6 +33,7 @@ Land changes as small, reviewable, correctly-attributed commits/PRs without swee
 6. **Don't mix concerns** — split unrelated changes into separate commits/PRs.
 7. **Clean baseline before starting** — for a new branch/worktree, verify the test baseline is green *before* layering work, so a later failure is attributable to your change, not inherited.
 8. **Destructive ops need explicit confirmation** — `git reset --hard`, `git clean -fd`, `branch -D`, `worktree remove`, or discarding a branch require an explicit, typed user confirmation naming what will be lost. Never discard work to "clean up".
+9. **npm lock hygiene (on a dependency change)** — do NOT regenerate `package-lock.json` from scratch on your machine: a dev-OS regen drops the Linux native-binding entries CI installs from and can silently minor-bump an engine with a native binding (a `^`-ranged test-runner/bundler). Base off the CI-green lock (`dev`/`main`) and add deps with `npm install --package-lock-only` (platform-independent; keeps other platforms' `packages` entries). Pin native-binding engines to the CI-green version, not `^`. Before push: `grep -c '"node_modules/@rollup/rollup-linux-x64-gnu"' package-lock.json` ≥ 1. (CI's npm version is a consumer fact — see `settings/`.)
 
 ## Success criteria
 
@@ -50,6 +51,7 @@ Land changes as small, reviewable, correctly-attributed commits/PRs without swee
 | "Same-sitting work — I'll flip the Linear issue to In Progress later / when I mark it Done." | A branch named for NEB-XXXX whose issue still says Backlog lies to the team and destroys the cycle-time-by-stage data delivery-audit and team-health-check compute from `startedAt`. Flip on start (step 1), Done only after the gate. |
 | "The PR title is close enough to what changed." | NEB-1407: a title claiming a surface the diff doesn't touch (e.g. an "iOS build repair" title over zero `ios/` files) misleads changelogs, release notes, and delivery-audit. Compare the title against `git diff --stat` and fix the title, not the expectation (step 5). |
 | "The checkout probably worked — I'll keep going." | A checkout blocked by another worktree exits non-zero; ignore the code and the next command lands commits on the branch you were already on (three did). After switching, confirm `git branch --show-current` and the base (Branch & merge policy). |
+| "I regenerated the lock and local `npm ci` is green." | A lock regenerated on macOS omits the Linux binding entries CI installs from → red CI, green local. Don't regen from scratch: base off the CI-green lock and `npm install --package-lock-only` (step 9); grep the `@rollup/rollup-linux-x64-gnu` entry before push. |
 
 ## Non-goals
 
