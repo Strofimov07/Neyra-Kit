@@ -124,6 +124,7 @@ if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; t
   run "source-policy regression" python3 "$KIT/test-source-policy.py"
   run "canonical leak scan" python3 "$KIT/check-external-leaks.py" "$ROOT"
   [ -f "$KIT/test-retire.py" ] && run "retire regression" python3 "$KIT/test-retire.py"
+  [ -f "$KIT/test-reconcile.py" ] && run "reconcile regression" python3 "$KIT/test-reconcile.py"
 fi
 run "skills lint"          python3 "$KIT/lint-skills.py"
 run "skill-mapping regression" python3 "$KIT/test-check-skill-mapping.py"

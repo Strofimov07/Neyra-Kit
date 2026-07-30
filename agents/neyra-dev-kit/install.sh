@@ -180,6 +180,63 @@ retire_managed_artifacts() {
   fi
 }
 
+# NEB-1648: the inline kit block in AGENTS.md must be reconciled on upgrade, not appended
+# once and abandoned — else new template sections (e.g. the `Current lessons` landing zone
+# kit-evolution routes promoted rules to) never reach a consumer. The block is wrapped in
+# markers so it can be replaced in place while the repo's own content around it is untouched.
+NK_BLOCK_BEGIN='<!-- neyra-dev-kit:begin (managed block — regenerated on install; edits between the markers are overwritten) -->'
+NK_BLOCK_END='<!-- neyra-dev-kit:end -->'
+
+reconcile_inline_block() {  # $1 = target AGENTS.md / CLAUDE.md path
+  local incf="$1"
+  local tmpl="$KIT_DIR/templates/AGENTS.include.md.tmpl"
+  local first_head; first_head="$(grep -m1 '^## ' "$tmpl" || true)"
+  local bf; bf="$(mktemp)"
+  { printf '%s\n' "$NK_BLOCK_BEGIN"; render "$tmpl"; printf '%s\n' "$NK_BLOCK_END"; } > "$bf"
+
+  local newf; newf="$(mktemp)"; local action
+  if grep -qF "$NK_BLOCK_BEGIN" "$incf"; then
+    # already marked → replace everything between the markers with the fresh block
+    awk -v b="$NK_BLOCK_BEGIN" -v e="$NK_BLOCK_END" -v bf="$bf" '
+      $0==b { while((getline l < bf)>0) print l; close(bf); skip=1; next }
+      $0==e { skip=0; next }
+      !skip { print }
+    ' "$incf" > "$newf"
+    action="reconciled managed block"
+  elif [[ -n "$first_head" ]] && grep -qF "$first_head" "$incf"; then
+    # unmarked legacy block (appended at EOF by an older installer) → migrate once:
+    # replace from its first managed heading to EOF with the marked block
+    awk -v h="$first_head" -v bf="$bf" '
+      index($0,h)==1 && !done { while((getline l < bf)>0) print l; close(bf); done=1; skip=1; next }
+      skip { next }
+      { print }
+    ' "$incf" > "$newf"
+    action="migrated legacy block to markers"
+  else
+    { cat "$incf"; printf '\n'; cat "$bf"; } > "$newf"
+    action="appended managed block"
+  fi
+  rm -f "$bf"
+
+  if [[ $DRY -eq 1 ]]; then
+    if diff -q "$incf" "$newf" >/dev/null 2>&1; then say "[dry] $(basename "$incf") kit block already current"
+    else say "[dry] $action in $(basename "$incf"):"; diff "$incf" "$newf" 2>/dev/null | sed 's/^/    /' | head -60; fi
+    rm -f "$newf"; return 0
+  fi
+  if diff -q "$incf" "$newf" >/dev/null 2>&1; then say "$(basename "$incf") kit block already current"; rm -f "$newf"
+  else cp "$incf" "$incf.bak"; mv "$newf" "$incf"; say "$action in $(basename "$incf") (backup .bak)"; fi
+
+  # Collision: a managed section the repo also owns OUTSIDE the markers. Report, don't fix —
+  # the owner decides (per NEB-1648: never silently duplicate or clobber repo-owned headings).
+  local h cnt
+  for h in "Self-Improvement Rule" "Current lessons"; do
+    cnt="$(grep -c "^## $h\$" "$incf" 2>/dev/null || true)"
+    if [[ "${cnt:-0}" -gt 1 ]]; then
+      say "note: $(basename "$incf") also carries its own '## $h' outside the kit block — the repo owns it; resolve the duplicate by hand"
+    fi
+  done
+}
+
 # Convert templated-agent id to its enable-flag name (e.g. linear-router → ENABLE_LINEAR_ROUTER).
 # Uses tr (not bash-4 ${^^}) so it runs on stock macOS bash 3.2 too.
 enable_flag() { echo "ENABLE_$(printf '%s' "$1" | tr 'a-z-' 'A-Z_')"; }
@@ -406,12 +463,7 @@ wired=""
 for inc in AGENTS.md CLAUDE.md; do
   incf="$TARGET/$inc"; [[ -f "$incf" ]] || continue
   wired=1
-  if grep -q "Engineering process (neyra-dev-kit)" "$incf" 2>/dev/null; then say "$inc already has the kit block — left as is"
-  elif [[ $DRY -eq 1 ]]; then say "[dry] append inline kit block to $inc"
-  else
-    blk="$(mktemp)"; render "$KIT_DIR/templates/AGENTS.include.md.tmpl" > "$blk"; cat "$blk" >> "$incf"; rm -f "$blk"  # atomic: render fully, then append
-    say "appended inline kit block (transparency + gate) to $inc"
-  fi
+  reconcile_inline_block "$incf"   # NEB-1648: replace the marked block in place (not append-once)
   break
 done
 [[ -z "$wired" && $DRY -eq 0 ]] && say "WARN: no AGENTS.md/CLAUDE.md in $TARGET — reference AGENTS.neyra-devkit.md manually"
@@ -516,15 +568,26 @@ if [[ "${ENABLE_HOOKS}" == "1" ]]; then
   hooks_json='{"SessionStart":[{"hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/session-start.sh\""}]}],"PreToolUse":[{"matcher":"Edit|Write|MultiEdit","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/pre-tool-use-guard.sh\""}]},{"matcher":"Task|Workflow","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/count-task.sh\""}]}],"PostToolUse":[{"matcher":"Edit|Write|MultiEdit","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/post-tool-use-format.sh\""}]}],"Stop":[{"hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/stop-gate.sh\""}]}]}'
   sdst="$TARGET/.claude/settings.json"
   if [[ $DRY -eq 1 ]]; then
-    say "[dry] wire 4 hooks (SessionStart/PreToolUse/PostToolUse/Stop) into $sdst"
-  elif grep -q 'neyra-dev-kit/hooks' "$sdst" 2>/dev/null; then
-    say "settings.json already wires neyra-dev-kit hooks — left as is"
+    say "[dry] reconcile kit hooks (SessionStart/PreToolUse/PostToolUse/Stop) in $sdst"
   elif [[ -f "$sdst" ]] && command -v jq >/dev/null 2>&1; then
     cp "$sdst" "$sdst.bak"
     tmp="$(mktemp)"
-    if jq --argjson add "$hooks_json" '.hooks = (.hooks // {}) | reduce ($add|to_entries[]) as $e (.; .hooks[$e.key] = ((.hooks[$e.key] // []) + $e.value))' "$sdst" > "$tmp"; then
-      mv "$tmp" "$sdst"; say "merged hooks into settings.json (backup .bak; existing hooks preserved)"
-    else rm -f "$tmp"; say "WARN: jq merge failed; settings.json unchanged (backup .bak)"; fi
+    # NEB-1651: reconcile, not skip-if-present. Per event, drop existing kit-owned hook
+    # groups (their command references neyra-dev-kit/hooks) and add the current kit groups.
+    # Keeps the consumer's own hooks; refreshes stale kit wiring on upgrade (e.g. a new
+    # matcher like Task|Workflow that a skip-if-present install would never deliver).
+    if jq --argjson add "$hooks_json" '
+        .hooks = (.hooks // {})
+        | reduce ($add | to_entries[]) as $e (.;
+            .hooks[$e.key] = (
+              [ (.hooks[$e.key] // [])[] | select( any(.hooks[]?; (.command // "") | test("neyra-dev-kit/hooks")) | not ) ]
+              + $e.value
+            )
+          )' "$sdst" > "$tmp"; then
+      mv "$tmp" "$sdst"; say "reconciled kit hooks in settings.json (backup .bak; consumer hooks preserved)"
+    else rm -f "$tmp"; say "WARN: jq reconcile failed; settings.json unchanged (backup .bak)"; fi
+  elif [[ -f "$sdst" ]]; then
+    say "WARN: $sdst exists but jq is not installed — cannot reconcile kit hooks; install jq and re-run"
   else
     mkdir -p "$TARGET/.claude"
     if command -v jq >/dev/null 2>&1; then printf '{"hooks":%s}' "$hooks_json" | jq . > "$sdst"; else printf '{"hooks":%s}\n' "$hooks_json" > "$sdst"; fi
