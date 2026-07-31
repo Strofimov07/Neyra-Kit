@@ -11,14 +11,10 @@ This repo uses the shared Neyra engineering skill stack. Auto-subagents live in 
 
 ## Self-Improvement Rule
 
-When work surfaces a repeatable mistake, a skipped gate, a gate that fired on a stale input, or a corrected assumption, close the loop via `kit-evolution` (`agents/dev-skills/kit-evolution/SKILL.md`): append one line to `agents/neyra-dev-kit/signals.log` in the same turn, then route it to a skill, an enforced check, a knowledge-graph node, or the list below.
+When work surfaces a repeatable mistake, a skipped gate, a gate that fired on a stale input, or a corrected assumption, close the loop via `kit-evolution` (`agents/dev-skills/kit-evolution/SKILL.md`): append one line to `agents/neyra-dev-kit/signals.log` in the same turn, then route it to a skill, an enforced check, a knowledge-graph node, or `settings/lessons.md`.
 
 A signal that lives only in the conversation evaporates. Don't wait for a retro.
 
+**Promoted project lessons live in `settings/lessons.md`, never in this block.** Everything between the kit markers is regenerated on every install — a lesson written here is wiped by the next upgrade. `settings/lessons.md` is repo-owned: the installer seeds it once and never touches it again.
+
 Auto-memory is durable knowledge, not scratch: when work changes a fact you've stored, update its memory node **and** re-stamp `last_verified` in the same turn (the `knowledge-graph` freshness contract — `Owner · Last-verified · drift-vs-code`), so `agents/neyra-dev-kit/knowledge/memory_freshness.py` can sweep it for staleness. An unstamped node rots silently.
-
-## Current lessons
-
-Patterns promoted from `signals.log` after they recurred or proved costly. Keep each to a few lines — this section is read every session.
-
-<!-- kit-evolution appends here when signals.log shows a pattern promoted to a rule. -->

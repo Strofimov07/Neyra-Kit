@@ -11,6 +11,7 @@
 |---|---|---|
 | `settings/configs/<repo>.sh` | твой конфиг установки (копия `agents/neyra-dev-kit/configs/_*.example.sh`) | `install.sh` |
 | `settings/CONNECTORS.md` | твои источники метрик для mgmt-кита (лестница paste/CSV → file → MCP; копия `CONNECTORS.example.md`) | team-health-check, delivery-audit, portfolio-pmo, goal-okr |
+| `settings/lessons.md` | промоутнутые уроки этого проекта (инсталлер сеет файл один раз, дальше он твой — кит его не перезаписывает). Читается каждую сессию | kit-evolution, каждая сессия через KIT_BOOTSTRAP |
 | `settings/facts/` | твои прод-факты (например `incident-runbook.md` — известные сигнатуры сбоев) | incident-runbook |
 | `settings/brand.md` | твои правила нейминга/бренда | всё, что пишет пользовательские тексты |
 | `settings/private/` | **добавь в .gitignore** — данные personal-режима goal-okr (личные KR, evidence trail, черновики планов). Никогда не коммитится и не шарится | только personal-режим goal-okr |

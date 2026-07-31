@@ -53,7 +53,8 @@ This operationalizes the `Self-Improvement Rule` in AGENTS.md as a triggerable l
 | Signal | Surface |
 |---|---|
 | A repeatable workflow worth reusing | canonical Neyra-Kit: `skill-capture` → new dev-skill |
-| A recurring mistake or missing rule | canonical Neyra-Kit: AGENTS.md `Current lessons` (promote via the Self-Improvement Rule) |
+| A recurring mistake or missing rule that would hold in any repo | canonical Neyra-Kit: a skill, a rule in the governance template, or an enforced check |
+| A recurring mistake specific to this project | consumer `settings/lessons.md` (repo-owned; read every session). Never inside the `neyra-dev-kit:begin/end` block in AGENTS.md — that block is regenerated on install and the lesson is wiped |
 | A project fact / preference / decision | consumer memory/settings; canonical `decisionLog` only for shared kit decisions |
 | A gate that should be enforced, not hoped for | canonical Neyra-Kit hook/check — don't hand-enforce in a consumer |
 | A skill that didn't fire or over-fired | canonical Neyra-Kit: fix its `description` to a pure "when to load" trigger |
