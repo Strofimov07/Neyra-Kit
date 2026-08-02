@@ -229,12 +229,37 @@ reconcile_inline_block() {  # $1 = target AGENTS.md / CLAUDE.md path
   # Collision: a managed section the repo also owns OUTSIDE the markers. Report, don't fix —
   # the owner decides (per NEB-1648: never silently duplicate or clobber repo-owned headings).
   local h cnt
-  for h in "Self-Improvement Rule" "Current lessons"; do
+  for h in "Self-Improvement Rule"; do
     cnt="$(grep -c "^## $h\$" "$incf" 2>/dev/null || true)"
     if [[ "${cnt:-0}" -gt 1 ]]; then
       say "note: $(basename "$incf") also carries its own '## $h' outside the kit block — the repo owns it; resolve the duplicate by hand"
     fi
   done
+
+  # NEB-1662: lessons predating the settings/ split. The block no longer emits this heading,
+  # so there is no duplicate to resolve — only content sitting where nothing reads it as canon.
+  if grep -q "^## Current lessons$" "$incf" 2>/dev/null; then
+    say "note: $(basename "$incf") still carries '## Current lessons' — promoted lessons now live in settings/lessons.md; move them by hand (content left untouched)"
+  fi
+}
+
+# NEB-1662: project lessons are consumer data, so they cannot live in the regenerated block.
+# Seed the repo-owned file once; an upgrade must never rewrite what a project has accumulated.
+seed_lessons_file() {
+  local dst="$TARGET/settings/lessons.md"
+  if [[ -f "$dst" ]]; then say "settings/lessons.md — kept as is (repo-owned)"; return 0; fi
+  if [[ $DRY -eq 1 ]]; then say "[dry] seed settings/lessons.md (once; never overwritten)"; return 0; fi
+  mkdir -p "$(dirname "$dst")"
+  cat > "$dst" <<'LESSONS'
+# Current lessons
+
+Patterns promoted from `agents/neyra-dev-kit/signals.log` after they recurred or proved
+costly. Project-specific and repo-owned: the kit seeds this file once and never rewrites it.
+Keep each lesson to a few lines — this file is read every session.
+
+<!-- kit-evolution appends here when signals.log shows a pattern promoted to a rule. -->
+LESSONS
+  say "seeded settings/lessons.md (repo-owned — the kit will not touch it again)"
 }
 
 # Convert templated-agent id to its enable-flag name (e.g. linear-router → ENABLE_LINEAR_ROUTER).
@@ -469,6 +494,7 @@ for inc in AGENTS.md CLAUDE.md; do
   reconcile_inline_block "$incf"   # NEB-1648: replace the marked block in place (not append-once)
   break
 done
+seed_lessons_file   # NEB-1662: repo-owned landing zone the regenerated block routes to
 [[ -z "$wired" && $DRY -eq 0 ]] && say "WARN: no AGENTS.md/CLAUDE.md in $TARGET — reference AGENTS.neyra-devkit.md manually"
 
 for srv in "${MCP_SERVERS[@]}"; do

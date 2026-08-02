@@ -39,12 +39,12 @@ class ReconcileTests(unittest.TestCase):
         self.assertEqual(0, (r := _install(self.tmp)).returncode, r.stderr)
         settings = Path(self.tmp, ".claude/settings.json")
         self.assertIn("neyra-dev-kit:begin", agents.read_text())
-        self.assertIn("## Current lessons", agents.read_text())
+        self.assertIn("## Self-Improvement Rule", agents.read_text())
         self.assertIn("Task|Workflow", settings.read_text())
 
         # Drift: rename a managed section, stale the kit matcher, add a consumer-owned hook.
         agents.write_text(
-            agents.read_text().replace("## Current lessons", "## OLD lessons"), encoding="utf-8"
+            agents.read_text().replace("## Self-Improvement Rule", "## OLD rule"), encoding="utf-8"
         )
         s = json.loads(settings.read_text())
         for grp in s["hooks"]["PreToolUse"]:
@@ -57,8 +57,10 @@ class ReconcileTests(unittest.TestCase):
 
         self.assertEqual(0, (r := _install(self.tmp)).returncode, r.stderr)
         at, st = agents.read_text(), settings.read_text()
-        self.assertIn("## Current lessons", at, "reconcile must restore the drifted managed section")
-        self.assertNotIn("OLD lessons", at)
+        self.assertIn(
+            "## Self-Improvement Rule", at, "reconcile must restore the drifted managed section"
+        )
+        self.assertNotIn("OLD rule", at)
         self.assertEqual(1, at.count("neyra-dev-kit:begin"), "markers must not duplicate")
         self.assertIn("Repo-owned line.", at, "repo content outside the block must be kept")
         self.assertIn("Task|Workflow", st, "stale kit matcher must be refreshed on upgrade")
@@ -75,7 +77,67 @@ class ReconcileTests(unittest.TestCase):
         self.assertIn("neyra-dev-kit:begin", at, "unmarked legacy block must migrate to markers")
         self.assertNotIn("OLD v0.25", at, "legacy content must be replaced")
         self.assertIn("Mine.", at, "repo content before the block must be kept")
-        self.assertIn("## Current lessons", at)
+        self.assertIn("## Self-Improvement Rule", at)
+
+
+class LessonsTests(unittest.TestCase):
+    """NEB-1662: project-specific lessons are consumer data — settings/, never the managed block.
+
+    The managed block is regenerated on every install, so a lessons section inside it is
+    either wiped on upgrade or duplicated by a repo-owned copy outside it. Lessons live in
+    settings/lessons.md, which the installer seeds once and then never touches.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        subprocess.run(["git", "init", "-q"], cwd=self.tmp, check=True, capture_output=True)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_block_carries_no_lessons_section(self):
+        agents = Path(self.tmp, "AGENTS.md")
+        agents.write_text("# Repo\n", encoding="utf-8")
+        self.assertEqual(0, (r := _install(self.tmp)).returncode, r.stderr)
+        self.assertNotIn(
+            "## Current lessons",
+            agents.read_text(),
+            "the regenerated block must not own consumer lesson data",
+        )
+
+    def test_seeds_lessons_file_once_and_never_overwrites(self):
+        Path(self.tmp, "AGENTS.md").write_text("# Repo\n", encoding="utf-8")
+        self.assertEqual(0, (r := _install(self.tmp)).returncode, r.stderr)
+        lessons = Path(self.tmp, "settings/lessons.md")
+        self.assertTrue(lessons.is_file(), "installer must seed settings/lessons.md")
+
+        lessons.write_text(
+            lessons.read_text() + "\n- A promoted project lesson.\n", encoding="utf-8"
+        )
+        self.assertEqual(0, (r := _install(self.tmp)).returncode, r.stderr)
+        self.assertIn(
+            "A promoted project lesson.",
+            lessons.read_text(),
+            "an upgrade must never clobber accumulated lessons",
+        )
+
+    def test_flags_a_legacy_lessons_section_for_migration(self):
+        agents = Path(self.tmp, "AGENTS.md")
+        agents.write_text(
+            "# Repo\n\n## Current lessons\n\n- Legacy lesson kept by the repo.\n", encoding="utf-8"
+        )
+        r = _install(self.tmp)
+        self.assertEqual(0, r.returncode, r.stderr)
+        self.assertIn(
+            "settings/lessons.md",
+            r.stdout,
+            "a consumer still holding lessons in AGENTS.md must be told where they now live",
+        )
+        self.assertIn(
+            "Legacy lesson kept by the repo.",
+            agents.read_text(),
+            "never delete repo-owned lesson content — report, don't fix",
+        )
 
 
 if __name__ == "__main__":

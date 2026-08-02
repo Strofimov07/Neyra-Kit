@@ -62,6 +62,12 @@ In a consumer, write it to the Neyra Skills Kit Linear project after dedup (or
 local-only `.neyra/kit-evolution-pending.log` when Linear is unavailable) and
 report the sync debt. Never append to an installed shared-kit copy.
 
+**Read `settings/lessons.md` before you start.** It holds this project's promoted
+lessons — mistakes that already cost the team once. It is repo-owned and read every
+session; a promoted lesson goes there, never inside the `neyra-dev-kit:begin/end`
+block in AGENTS.md (that block is regenerated on install, so a lesson written in it
+is silently wiped on the next upgrade).
+
 ## Parallel agents — workspace isolation (mandatory)
 
 When two or more agents run in the same repo at the same time, each MUST have its
