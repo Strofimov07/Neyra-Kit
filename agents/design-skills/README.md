@@ -20,11 +20,15 @@ copy is generated and gitignored — **edit here, never there.**
 
 ## Scope
 
-These emit **CSS/React/HTML**, not SwiftUI. They are `when_to_use`-gated to web
-surfaces (`aso/frontend-web`, `backend/ops-console`, `screenshots/generator`,
-marketing/landing pages). They do not fire on the iOS app. Complements
-`design-system-conformance` (reuse the shipped design system) — taste skills lead
-on greenfield web, conformance leads inside an existing system.
+Two disjoint families, split by `when_to_use` so they never cross-fire:
+
+| Family | Emits | Gated to |
+|---|---|---|
+| **Web** (most of this dir) | CSS / React / HTML | `aso/frontend-web`, `backend/ops-console`, `screenshots/generator`, marketing/landing pages |
+| **Native Apple** | SwiftUI | `ios/**` |
+
+Both complement `design-system-conformance` (reuse the shipped design system) the same
+way — taste skills lead on greenfield surfaces, conformance leads inside an existing system.
 
 ## Contents
 
@@ -37,6 +41,20 @@ on greenfield web, conformance leads inside an existing system.
 - `animation-vocabulary` — reverse-lookup glossary for naming motion effects
 
 **Style variants (pick by brief):** `minimalist-ui`, `industrial-brutalist-ui`, `brandkit`
+
+**Native Apple (SwiftUI — gated to `ios/**`, never fires on web):**
+- `swiftui-design-principles` — the iOS counterpart to `design-taste-frontend`: base-4/8
+  spacing grid, hierarchy through weight not size, system semantic colors, native grouped
+  content over bespoke cards, pre-ship checklist. Leads on how a native screen should look.
+- `swiftui-pro` — SwiftUI code review (Paul Hudson): deprecated/soft-deprecated API,
+  navigation and state modelling, performance, accessibility. Correctness, not looks.
+- `apple-hig` — greppable local mirror of Apple's Human Interface Guidelines (41 files).
+  A **fact** corpus: hit-target minimums, Dynamic Type, what a system component can do,
+  App-Review conventions. Explicitly not design direction — for that use
+  `swiftui-design-principles`.
+
+The three are layered deliberately: `swiftui-design-principles` decides how it looks,
+`swiftui-pro` checks how it is written, `apple-hig` answers what the platform requires.
 
 **Image-gen / cross-harness (situational):** `imagegen-frontend-web`,
 `imagegen-frontend-mobile`, `image-to-code`, `stitch-design-taste` (Google Stitch),
@@ -54,6 +72,14 @@ All third-party MIT. Each skill dir carries `LICENSE` + `SOURCE.md` (upstream re
 pinned commit, local edits). Sources:
 - [`Leonxlnx/taste-skill@b177427`](https://github.com/Leonxlnx/taste-skill) (MIT)
 - [`emilkowalski/skill@1274a05`](https://github.com/emilkowalski/skill) (MIT)
+- [`arjitj2/swiftui-design-principles@791d22d`](https://github.com/arjitj2/swiftui-design-principles) (MIT)
+- [`twostraws/SwiftUI-Agent-Skill@be297ff`](https://github.com/twostraws/SwiftUI-Agent-Skill) (MIT)
+- [`prisma-labs-dev/apple-skills@a76633b`](https://github.com/prisma-labs-dev/apple-skills) (MIT)
+
+The Apple-platform skills come via
+[`twostraws/swift-agent-skills`](https://github.com/twostraws/swift-agent-skills), Paul
+Hudson's curated directory — it requires human (not AI) authorship and MIT-compatible
+licensing, so check it before authoring any new Swift/Apple skill here.
 
 Only local edit vs upstream: a `when_to_use` frontmatter field added where the
 upstream description lacked an explicit trigger (kit `SKILL_CONTRACT` requires one).

@@ -577,3 +577,35 @@ reports the skip. Documented in `config.example.yml`.
 **Consequence.** A UI-less consumer opts out of ~2.7M / 149 files with one config line;
 default installs are unchanged. Verified: dev install with the toggle 0 → no
 `agents/design-skills` and a "disabled" note; default → 16 skills synced; `doctor: OK`.
+
+## 2026-08-06 — Native Apple design skills join the bundled layer (v0.39.0)
+
+**Context.** `agents/design-skills/` held 16 skills, every one `when_to_use`-gated to web
+surfaces — its own README stated "These emit CSS/React/HTML, not SwiftUI … They do not fire
+on the iOS app." Consumers whose flagship product is a native iOS app therefore had **no
+authoring design skill at all**; `design-system-conformance` covers that surface only as a
+reviewer. The gap was being closed by hand, per-repo, or not at all.
+
+**Decision.** Vendor three MIT skills instead of authoring one, all reached through
+[`twostraws/swift-agent-skills`](https://github.com/twostraws/swift-agent-skills) — Paul
+Hudson's curated directory, which requires human (not AI) authorship and MIT-compatible
+licensing, and is now named in the README as the place to check before writing any new
+Swift/Apple skill.
+
+They are layered so none overlaps: `swiftui-design-principles` (arjitj2@791d22d) decides how
+a native screen should look — base-4/8 grid, weight-based hierarchy, semantic colors, the
+explicit goal of not looking like "AI-generated slop"; `swiftui-pro` (twostraws@be297ff)
+reviews how the SwiftUI is written; `apple-hig` (prisma-labs-dev@a76633b) answers what the
+platform requires, as a greppable fact corpus that upstream itself scopes away from
+aesthetics.
+
+Rejected after evaluation: `emilkowalski/apple-design` (self-described "translated for the
+web"; mostly already native API in SwiftUI) and `wshobson/mobile-ios-design` (cheat-sheet
+depth — an app can satisfy all of it and still read as machine-made).
+
+**Consequence.** `agents/design-skills/` now holds two disjoint families split by
+`when_to_use` — web and native Apple — and the README's scope section is rewritten to say so.
+Payload grows ~750KB, dominated by `apple-hig`; that is disk, not context (the corpus is
+grepped on demand), and `ENABLE_BUNDLED_SKILLS=0` from v0.37.0 already opts a repo out
+wholesale. Trimmed 12 `*.videos.md` files from the HIG mirror — pure URL dumps, nothing links
+to them. Verified: `lint-skills` clean on all 19 bundled skills.
