@@ -161,7 +161,7 @@ The following guidelines can help you write useful accessibility labels for char
 
 #### Videos
 
-- [Bring Swift Charts to the third dimension](https://developer.apple.com/videos/play/wwdc2025/313) - Learn how to bring your 2D Swift Charts to the third dimension with Chart3D and visualize your data sets from completely new perspectives. Plot your data in 3D, visualize mathematical surfaces, and customize everything from the camera to the materials to make your 3D charts more intuitive and delightful. 
+- [Bring Swift Charts to the third dimension](https://developer.apple.com/videos/play/wwdc2025/313) - Learn how to bring your 2D Swift Charts to the third dimension with Chart3D and visualize your data sets from completely new perspectives. Plot your data in 3D, visualize mathematical surfaces, and customize everything from the camera to the materials to make your 3D charts more intuitive and delightful.
 
 To get the most out of this session, we recommend being familiar with creating 2D Swift Charts.
 - [Design app experiences with charts](https://developer.apple.com/videos/play/wwdc2022/110342) - Learn how you can enhance your app with charts to communicate data with more clarity and appeal. We'll show you when to use charts, how to use them and how they work together in a chart design system.
