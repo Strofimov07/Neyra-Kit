@@ -54,6 +54,29 @@ caller is prose with a shebang, and a new check gets dogfooded on this repositor
 merge — a report whose top entries are noise is the muted alert channel
 `launch-ops-baseline` warns about.
 
+## 2026-08-28 — The wiki is canon too, and nothing was checking it (v0.45.0)
+
+**Context.** v0.40.0 gave the repository a hygiene check that finds host addresses in
+tracked docs, and a consumer cleaned 31 of them out. Then the same consumer looked at its
+wiki, where the canonical operational pages actually live, and found the worse half of the
+problem: the release/ops page named a decommissioned server as the current production
+host, a runbook routed an engineer to an address present in no config, and the page itself
+carried a note to "reconcile the drift" that had sat there for seven weeks. Nothing scans
+the wiki — and the wiki is what a person reads before touching a server.
+
+**Decision.** The weekly `doc-freshness` routine grows a fourth check: scan the
+operational pages for literal host addresses and report them, since a literal address
+belongs in exactly one host map and every other page should name the host and link it.
+Reporting only — the routine never edits the canon. `knowledge-graph` states the general
+rule it follows from: volatile operational facts get one owner node, and the wiki is not
+exempt just because no linter can reach it.
+
+**Consequence.** The gap between the two halves of the canon closes at the level where it
+can: the repository is enforced by a check, the wiki by a recurring read with a named
+report. That is weaker than a gate, and deliberately so — the routine runs as an agent
+with wiki access, and an automated bulk edit of canonical pages is exactly what
+`knowledge-graph` forbids.
+
 ## 2026-08-28 — Doc freshness is cron hygiene, not a CI workflow (v0.44.0)
 
 **Context.** The 0.41.0 upgrade of the Pravo consumer re-created
