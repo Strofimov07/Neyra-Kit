@@ -15,6 +15,8 @@ per fact, a freshness contract, and a code→node bridge.
 
 ## Triggers that keep docs fresh (skill `knowledge-graph` → Triggers)
 1. **code→node** (DoD, primary) — change a mapped file → update its node.
+   Checked by the weekly routine (and on demand: `python3 docs/knowledge/check_code_node.py <base>`),
+   not by CI — freshness is agent hygiene on a schedule, not a pipeline step.
 2. **cadence sweep** — `memory_freshness.py` + canonical-hub review dates.
 3. **issue-close → canon**.
 4. **verify vs running system** — periodic check against staging/prod (code ships ahead of docs).

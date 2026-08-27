@@ -23,10 +23,6 @@ ENABLE_LINEAR_ROUTER=1
 ENABLE_NEYRA_MCP=0
 ENABLE_FIREBASE_MCP=0
 
-# Doc-freshness CI workflow (docs/knowledge code→node check). Set to 0 if this repo
-# deliberately does not want it — the decision then survives upgrades instead of the
-# installer scaffolding it back every time.
-ENABLE_DOC_FRESHNESS_WORKFLOW=1
 
 FIREBASE_PROJECT_DIR="settings/firebase"
 FIREBASE_MCP_ACCESS="limited"
