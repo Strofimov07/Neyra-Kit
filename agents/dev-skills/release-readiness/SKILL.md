@@ -40,7 +40,17 @@ Decide whether the change is actually ready to ship or only ready to merge.
 - The artifact that will actually ship was validated, or the release remains
   explicitly not production-ready for that path.
 
-### 3. Check rollout safety
+### 3. Check whether the release changed what the product is
+
+- A release that adds the first payment, the first personal-data store, the first
+  metered-API call, the first long-running job, or the first real users changes
+  which disciplines are mandatory from now on. Update `settings/product.yml` in
+  the same change; the gates follow the declaration, not the intention.
+
+**Success criteria**
+- Either no capability flag changed, or the profile was updated with the release.
+
+### 4. Check rollout safety
 
 - Note whether a feature flag, guard, or staged rollout exists.
 - If none exists, state whether the risk is still acceptable.
@@ -49,7 +59,7 @@ Decide whether the change is actually ready to ship or only ready to merge.
 **Success criteria**
 - The team knows how risk would be contained after release.
 
-### 4. Check operational visibility
+### 5. Check operational visibility
 
 - Ensure monitoring, analytics, and ownership are clear enough to detect regressions.
 - Confirm the right follow-up note exists if visibility is partial.
@@ -57,7 +67,7 @@ Decide whether the change is actually ready to ship or only ready to merge.
 **Success criteria**
 - Post-release regressions would be observable by someone specific.
 
-### 5. State residual risk honestly
+### 6. State residual risk honestly
 
 - Separate:
   - verified
@@ -67,7 +77,7 @@ Decide whether the change is actually ready to ship or only ready to merge.
 **Success criteria**
 - Release confidence is explicit and defensible.
 
-### 6. Close the follow-up loop
+### 7. Close the follow-up loop
 
 - Every follow-up gets a ticket **before** closure: a `Follow-up:` line in a commit or
   PR body, and any unresolved item in the issue's own acceptance / "remaining to close"

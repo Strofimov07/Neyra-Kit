@@ -41,6 +41,21 @@ files are missing. `launch-compliance` and `launch-ops-baseline` are cadence
 skills with no auto-trigger surface, so they join MANUAL rather than shipping a
 subagent that would fire on unrelated diffs.
 
+The profile itself needed the same treatment it was built to give: a declaration
+with no freshness contract rots exactly like a runbook naming a decommissioned
+host. So it carries `last_reviewed` + `review_after_days` (default 90), and
+`product-profile.py` reads the code back — reporting capabilities the repository
+demonstrably has while the profile denies them (a metered-API SDK, a payment
+integration, a personal-data field in a model, a deploy pipeline). The check runs
+in one direction only: declared-false-but-present is a finding, declared-true-
+without-evidence is not, because a gate switched on early is the safe side. Three
+skills now carry the update trigger at the moments a capability actually appears:
+`launch-compliance` (new market, data category, payment method, subprocessor),
+`data-inventory` (first personal-data store or first recipient abroad), and
+`release-readiness` (the release that turns any of them on). `test-product-profile.py`
+pins all of it, including the scoping that keeps the word "email" in prose from
+tripping the personal-data signature.
+
 **Consequence.** The kit now covers "is this sellable and operable", not only "is
 this correct". Jurisdiction and domain stay out of the shared layer by
 construction: `launch-compliance` owns the requirement taxonomy while the legal

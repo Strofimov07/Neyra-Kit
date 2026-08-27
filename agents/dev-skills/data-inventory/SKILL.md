@@ -94,13 +94,16 @@ The lawful bases and required notices are jurisdiction-specific: they come from
 **Success criteria**
 - Free-text stores state their masking coverage and its gaps.
 
-### 8. Keep it derived
+### 8. Keep it derived, and keep the declaration honest
 
 - Re-derive from models and migrations; add a check that fails when a new store
   appears without an inventory row.
+- A first store of personal data, or a first recipient abroad, changes what the
+  product *is*: set the matching flag in `settings/product.yml` in the same
+  change rather than leaving the gate off.
 
 **Success criteria**
-- A new store cannot land silently.
+- A new store cannot land silently, and the profile matches what is now held.
 
 ## Common rationalizations (and why they're invalid)
 

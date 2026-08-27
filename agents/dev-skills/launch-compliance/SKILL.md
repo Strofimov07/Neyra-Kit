@@ -104,13 +104,18 @@ found by someone else later.
 - External dependencies are listed with owner and date, and are visible as
   blockers where they block.
 
-### 7. Re-run on trigger
+### 7. Re-run on trigger, and update the declaration
 
 - New market, new data category, new payment method, new subprocessor, or a
   material change in what the product claims to do.
+- Update `settings/product.yml` in the same change — the flags and the
+  jurisdiction list are what turn these gates on for everyone after you, and a
+  profile that still describes last year's product turns them off silently.
+  Stamp `last_reviewed` when you re-read it.
 
 **Success criteria**
-- The triggers are written down where the team will meet them.
+- The triggers are written down where the team will meet them, and the profile
+  reflects what the product does now.
 
 ## Common rationalizations (and why they're invalid)
 

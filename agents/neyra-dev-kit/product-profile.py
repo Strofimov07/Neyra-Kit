@@ -10,8 +10,15 @@ Deliberately a minimal flat-key reader, not a YAML implementation: the profile
 is a short list of booleans and one list, and depending on a YAML library would
 put a package install between a repo and its gates.
 
-Usage: product-profile.py [repo] [--strict]
-  --strict: missing profile or missing required fact files exit non-zero.
+A declaration with no freshness contract rots exactly like a runbook naming a
+decommissioned host: the flags stay as someone typed them the day the repo was
+young, the gates they imply stay off, and nothing says a word. So the profile
+also carries a review date, and this tool reads the code back to see whether the
+declaration still matches what the repository actually contains.
+
+Usage: product-profile.py [repo] [--strict] [--seed]
+  --strict: missing profile, missing fact files, a stale review, or an
+            undeclared capability found in the code exit non-zero.
 """
 import argparse
 import os
@@ -30,6 +37,46 @@ GATES = [
 ]
 
 TRUE = {"true", "yes", "on", "1"}
+
+DEFAULT_REVIEW_AFTER_DAYS = 90
+
+# Evidence that a capability exists in the repository, used only in the direction
+# that matters: the profile says false while the code says otherwise. The reverse
+# (declared true, no evidence) is not reported — a product may be days away from
+# shipping the thing, and the gate being on early is the safe side.
+CODE_EXT = {".py", ".ts", ".tsx", ".js", ".jsx", ".swift", ".kt", ".go", ".rb", ".java",
+            ".cs", ".php", ".rs", ".sql", ".yml", ".yaml", ".toml", ".tf"}
+SIGNATURES = {
+    "metered_apis": (
+        re.compile(r"\b(anthropic|openai|vertexai|generativeai|bedrock|cohere|mistralai|"
+                   r"replicate|togetherai)\b|\b(input_tokens|prompt_tokens|completion_tokens)\b", re.I),
+        None),
+    "generates_claims": (
+        re.compile(r"\b(system_prompt|prompt_template|chat_completion|messages\.create|"
+                   r"generate_content|completion\.create)\b", re.I),
+        None),
+    "retrieval": (
+        re.compile(r"\b(elasticsearch|opensearch|meilisearch|typesense|qdrant|weaviate|"
+                   r"pinecone|pgvector|faiss|bm25|vector_store|embeddings?)\b", re.I),
+        None),
+    "long_jobs": (
+        re.compile(r"\b(celery|sidekiq|resque|apscheduler|backfill|reindex|batch_job|"
+                   r"job_queue|worker_loop)\b", re.I),
+        None),
+    "sells": (
+        re.compile(r"\b(stripe|paddle|braintree|checkout_session|invoice|billing|"
+                   r"subscription_plan|payment_intent)\b", re.I),
+        None),
+    "personal_data": (
+        re.compile(r"\b(email|phone_number|first_name|last_name|passport|date_of_birth|"
+                   r"ip_address|user_agent)\b", re.I),
+        # only where a data shape is defined — the word "email" appears everywhere
+        re.compile(r"(models?|schema|entity|entities|migrations?|serializers?)", re.I)),
+    "in_production": (
+        None,
+        re.compile(r"(\.github/workflows/.*deploy|docker-compose[.-].*prod|"
+                   r"(^|/)(k8s|kubernetes|helm|terraform|ansible)/)", re.I)),
+}
 
 TEMPLATE = """# Product profile — what this product IS, so the kit knows which gates apply.
 # Repo-owned: the kit reads it, never rewrites it. Validate with:
@@ -65,6 +112,12 @@ long_jobs: false
 
 # Carries real users or revenue on infrastructure you operate.
 in_production: false
+
+# Freshness contract. A profile nobody revisits is a profile that lies:
+# re-read the flags on this cadence and whenever a release turns one of them on.
+# ISO date, or "unset" until the first review.
+last_reviewed: unset
+review_after_days: 90
 """
 
 
@@ -87,6 +140,68 @@ def parse_profile(path):
         else:
             data[key] = val.strip("'\"")
     return data
+
+
+def _tracked(root):
+    import subprocess
+    try:
+        out = subprocess.run(["git", "-C", root, "ls-files", "-z"],
+                             capture_output=True, text=True, check=True).stdout
+        return [f for f in out.split("\0") if f]
+    except Exception:
+        return []
+
+
+def detect_drift(root, prof):
+    """Capabilities the code shows but the profile denies. Returns [(flag, [paths])]."""
+    files = _tracked(root)
+    if not files:
+        return []
+    undeclared = [f for f, _sk, _fx in GATES if not prof.get(f) and f in SIGNATURES]
+    if not undeclared:
+        return []
+    hits = {f: [] for f in undeclared}
+    for rel in files:
+        low = rel.lower()
+        for flag in undeclared:
+            if len(hits[flag]) >= 3:
+                continue
+            body_re, path_re = SIGNATURES[flag]
+            if body_re is None:                      # path-only signature
+                if path_re.search(low):
+                    hits[flag].append(rel)
+                continue
+            if path_re is not None and not path_re.search(low):
+                continue                             # body signature scoped to matching paths
+            if os.path.splitext(rel)[1] not in CODE_EXT:
+                continue
+            try:
+                text = open(os.path.join(root, rel), encoding="utf-8", errors="ignore").read(200_000)
+            except OSError:
+                continue
+            if body_re.search(text):
+                hits[flag].append(rel)
+    return [(f, v) for f, v in hits.items() if v]
+
+
+def review_status(prof):
+    """(state, detail) where state is 'ok' | 'unset' | 'stale' | 'unreadable'."""
+    import datetime
+    raw = str(prof.get("last_reviewed") or "").strip()
+    if not raw or raw.lower() in {"unset", "never", "none"}:
+        return "unset", "no last_reviewed date"
+    try:
+        reviewed = datetime.date.fromisoformat(raw)
+    except ValueError:
+        return "unreadable", "last_reviewed is not an ISO date: %r" % raw
+    try:
+        after = int(prof.get("review_after_days") or DEFAULT_REVIEW_AFTER_DAYS)
+    except (TypeError, ValueError):
+        after = DEFAULT_REVIEW_AFTER_DAYS
+    age = (datetime.date.today() - reviewed).days
+    if age > after:
+        return "stale", "reviewed %s, %d days ago (cadence %d)" % (raw, age, after)
+    return "ok", "reviewed %s, %d days ago (cadence %d)" % (raw, age, after)
 
 
 def main():
@@ -139,7 +254,31 @@ def main():
     else:
         print("  all present")
 
-    if a.strict and missing:
+    state, detail = review_status(prof)
+    print("── freshness")
+    if state == "ok":
+        print("  %s" % detail)
+    elif state == "unset":
+        print("  WARN %s — set last_reviewed (ISO date) so staleness becomes visible" % detail)
+    elif state == "unreadable":
+        print("  WARN %s" % detail)
+    else:
+        print("  STALE %s — re-read the flags against what the product does now" % detail)
+
+    drift = detect_drift(root, prof)
+    print("── declaration vs code")
+    if drift:
+        for flag, paths in drift:
+            print("  %s: false — but the repository shows it, e.g.:" % flag)
+            for rel in paths:
+                print("      %s" % rel)
+        print("  either the flag is out of date (turn it on, the gate comes with it)")
+        print("  or the evidence is incidental — say which in the profile's comments")
+    else:
+        print("  no undeclared capabilities found")
+
+    failed = bool(missing) or state == "stale" or bool(drift)
+    if a.strict and failed:
         print("product-profile: FAIL (--strict)")
         return 1
     print("product-profile: OK")

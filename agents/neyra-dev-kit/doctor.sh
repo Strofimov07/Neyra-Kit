@@ -125,6 +125,7 @@ if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; t
   run "canonical leak scan" python3 "$KIT/check-external-leaks.py" "$ROOT"
   [ -f "$KIT/test-retire.py" ] && run "retire regression" python3 "$KIT/test-retire.py"
   [ -f "$KIT/test-reconcile.py" ] && run "reconcile regression" python3 "$KIT/test-reconcile.py"
+  [ -f "$KIT/test-product-profile.py" ] && run "product-profile regression" python3 "$KIT/test-product-profile.py"
 fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Product profile + project-fact anchors (advisory — never fail the run).
