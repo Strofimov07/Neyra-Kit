@@ -126,6 +126,8 @@ if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; t
   [ -f "$KIT/test-retire.py" ] && run "retire regression" python3 "$KIT/test-retire.py"
   [ -f "$KIT/test-reconcile.py" ] && run "reconcile regression" python3 "$KIT/test-reconcile.py"
   [ -f "$KIT/test-product-profile.py" ] && run "product-profile regression" python3 "$KIT/test-product-profile.py"
+  [ -f "$KIT/test-optional-artifacts.py" ] && run "optional-artifacts regression" python3 "$KIT/test-optional-artifacts.py"
+  [ -f "$KIT/test-repo-hygiene.py" ] && run "repo-hygiene regression" python3 "$KIT/test-repo-hygiene.py"
   [ -f "$KIT/test-profile-gating.py" ] && run "profile-gating regression" python3 "$KIT/test-profile-gating.py"
 fi
 # ─────────────────────────────────────────────────────────────────────────────
