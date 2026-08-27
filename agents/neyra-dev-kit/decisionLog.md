@@ -54,6 +54,44 @@ caller is prose with a shebang, and a new check gets dogfooded on this repositor
 merge — a report whose top entries are noise is the muted alert channel
 `launch-ops-baseline` warns about.
 
+## 2026-08-28 — Doc freshness is cron hygiene, not a CI workflow (v0.44.0)
+
+**Context.** The 0.41.0 upgrade of the Pravo consumer re-created
+`.github/workflows/doc-freshness.yml`, a file that repo had deleted on purpose in a CI-cost
+cleanup. The copy was guarded by `[[ -f … ]] ||`, so "absent" read as "not installed yet"
+rather than "retired here", and the resurrection was silent. The template had meanwhile been
+widened to `paths: ['**']` after the `src/**` miss (v0.31.0), so the reinstated job would
+have run on every single pull request.
+
+The deeper defect is not the missing toggle. The kit already ships the right mechanism: a
+routine spec staged into `docs/knowledge/routines/` and registered with the app-side
+scheduler (that consumer has been running it weekly). The workflow was a second, duplicate
+runner of `check_code_node.py` — paid per pull request, reporting into a step summary nobody
+reads, and, unlike the routine, unable to do the other two thirds of the sweep (memory
+cadence, canonical-hub review dates).
+
+**Decision.** Remove the workflow template and its install-time copy. Freshness runs from
+the registered routine; `check_code_node.py` stays available on demand. `KIT_BOOTSTRAP` and
+the scaffold README now say which runner owns the trigger, so the next reader does not
+re-add a pipeline step for it.
+
+**Consequence.** A consumer that retires the job keeps it retired; no repo pays CI minutes
+per pull request for a sweep that already runs weekly. Verified: `install.sh --dry-run` and a
+real install into a scratch repo write no `.github/workflows/`; existing consumer files are
+untouched; `doctor: OK`; linters clean. Note for the future — an installer line that copies
+"only if absent" cannot tell a fresh repo from a deliberate deletion, so it may seed a file
+but must never be the thing that keeps it alive.
+
+**Addendum (v0.44.0).** This landed after v0.42.0 had already shipped a weaker fix for
+the same signal: `ENABLE_DOC_FRESHNESS_WORKFLOW`, a per-consumer toggle over the very
+artifact being removed here. Two answers to one question were written in parallel, and
+the toggle is the worse of them — it preserves a duplicate runner, keeps a paid job one
+config line away from returning, and hands every consumer a decision the kit is better
+placed to make once. The toggle, its example-config documentation and
+`test-optional-artifacts.py` are removed with this change; the parts of that release
+that stand on their own — `--exclude` and the public/private split in
+`check-repo-hygiene` — remain, as they never depended on the workflow.
+
 ## 2026-08-28 — The profile governs the agents that predate it (v0.43.0)
 
 **Context.** v0.41.0 let `settings/product.yml` select the six launch-layer agents, and

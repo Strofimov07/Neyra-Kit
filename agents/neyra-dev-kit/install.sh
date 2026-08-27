@@ -57,7 +57,7 @@ fi
 
 # Defaults; overridden by config.
 ENABLE_LINEAR_ROUTER=1; ENABLE_LOCALIZATION_CHECKER=1; ENABLE_CONTRACT_CHECKER=1
-ENABLE_NEYRA_MCP=0; ENABLE_FIREBASE_MCP=0; ENABLE_CURSOR_SKILLS=1; ENABLE_HOOKS=1; ENABLE_BUNDLED_SKILLS=1; ENABLE_DOC_FRESHNESS_WORKFLOW=1
+ENABLE_NEYRA_MCP=0; ENABLE_FIREBASE_MCP=0; ENABLE_CURSOR_SKILLS=1; ENABLE_HOOKS=1; ENABLE_BUNDLED_SKILLS=1
 REPO_NAME=""; STACK=""; BUILD_VERIFY_CMD=""; LOCALES=""; I18N_MECHANISM=""
 CONTRACT_STACK=""; LINEAR_WORKSPACE=""; LINEAR_ROUTING=""; LINEAR_LABELS=""
 # Linear MCP server-instance prefix the linear-router's tools resolve against. This is
@@ -717,38 +717,25 @@ if [[ "${ENABLE_HOOKS}" == "1" ]]; then
 fi
 
 # Knowledge graph scaffold (skill `knowledge-graph`). Copies freshness tooling
-# (always) + templates (only if absent) into docs/knowledge/, plus the CI workflow.
+# (always) + templates (only if absent) into docs/knowledge/.
 # Best-effort, never fails the install.
+#
+# No CI workflow is written here. Doc freshness is agent hygiene on a schedule, not a
+# pipeline step: the sweep is the routine staged below and registered with the app-side
+# scheduler. A workflow duplicated it, ran on every pull request, and — because the copy
+# was guarded by "file absent" — silently reinstated itself in a consumer that had
+# deliberately retired it to cut CI cost.
 if [[ -d "$KIT_DIR/knowledge" ]]; then
   kdst="$TARGET/docs/knowledge"
   if [[ $DRY -eq 1 ]]; then
-    say "[dry] scaffold docs/knowledge/ (memory_freshness.py, check_code_node.py, templates, CI)"
+    say "[dry] scaffold docs/knowledge/ (memory_freshness.py, check_code_node.py, templates)"
   else
     mkdir -p "$kdst" 2>/dev/null || true
     cp "$KIT_DIR/knowledge/memory_freshness.py" "$kdst/memory_freshness.py" 2>/dev/null || true
     cp "$KIT_DIR/knowledge/check_code_node.py" "$kdst/check_code_node.py" 2>/dev/null || true
     [[ -f "$kdst/knowledge-map.yml" ]] || cp "$KIT_DIR/knowledge/templates/knowledge-map.yml" "$kdst/knowledge-map.yml" 2>/dev/null || true
     [[ -f "$kdst/README.md" ]] || cp "$KIT_DIR/knowledge/templates/README.md" "$kdst/README.md" 2>/dev/null || true
-    # The CI workflow is optional: a consumer may have deleted it on purpose (CI
-    # cost, a different freshness mechanism). "Absent" alone cannot tell "not yet
-    # installed" from "removed deliberately", so the decision lives in the config
-    # and survives upgrades. Switching it off retires an unmodified copy and keeps
-    # an edited one — the same policy the agent and tool passes use.
-    dfw="$TARGET/.github/workflows/doc-freshness.yml"
-    if [[ -f "$KIT_DIR/knowledge/templates/doc-freshness.yml" ]]; then
-      if [[ "${ENABLE_DOC_FRESHNESS_WORKFLOW:-1}" == "1" ]]; then
-        mkdir -p "$TARGET/.github/workflows" 2>/dev/null || true
-        [[ -f "$dfw" ]] || cp "$KIT_DIR/knowledge/templates/doc-freshness.yml" "$dfw" 2>/dev/null || true
-      elif [[ -f "$dfw" ]]; then
-        if [[ "$(nk_sha "$dfw")" == "$(nk_sha "$KIT_DIR/knowledge/templates/doc-freshness.yml")" ]]; then
-          rm -f "$dfw" 2>/dev/null || true
-          say "doc-freshness workflow disabled (ENABLE_DOC_FRESHNESS_WORKFLOW=0) — removed the unmodified copy"
-        else
-          say "doc-freshness workflow disabled, but the copy in this repo was edited — left in place, remove it yourself"
-        fi
-      fi
-    fi
-    say "scaffolded docs/knowledge/ (freshness tooling + templates + CI; existing files kept)"
+    say "scaffolded docs/knowledge/ (freshness tooling + templates; existing files kept)"
   fi
 fi
 

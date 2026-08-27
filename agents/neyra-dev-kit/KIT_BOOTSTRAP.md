@@ -85,6 +85,11 @@ a doc update: **code→node** (DoD — when you change a file mapped in
 routine isn't registered for this repo, register it from the staged spec
 `docs/knowledge/routines/doc-freshness.SKILL.md`.
 
+The sweep is agent hygiene on a schedule — the registered routine is the whole
+mechanism. The kit installs no CI workflow for it: a pipeline step would re-run the
+same check on every pull request, and a repo that cut it for cost would get it back
+on the next upgrade.
+
 ## Autonomous goal mode (opt-in only)
 
 `goal-mode` lets the kit drive a goal end-to-end (decompose → dispatch → gate →
