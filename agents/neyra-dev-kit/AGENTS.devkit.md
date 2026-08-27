@@ -58,10 +58,19 @@ start with `test-first` — a failing test (RED) before the change.
 | launch-compliance | (manual — cadence) | pre-sale readiness: entity, agreement, data, money, disclosure, sector rules |
 | launch-ops-baseline | (manual — cadence) | pre-sale ops floor: off-host probe, expiries, alert channel, rehearsed restore |
 
-The last six auto-invocable rows are **profile-selected**: `settings/product.yml`
-declares what this product is, and the installer ships only the agents its flags turn
-on. An agent missing from `.claude/agents/` means the profile says this product does
-not do that — fix the flag, re-run the installer, and the gate comes with it.
+Many auto-invocable rows are **profile-selected**: `settings/product.yml` declares what
+this product is, and the installer ships only the agents its flags turn on. Besides the
+launch layer this now covers `migration-safety`, `design-system-conformance`,
+`contract-doc-sync`, `analytics-instrumentation`, `post-merge-watch`, `pr-review-watch`
+and the templated `contract-checker` / `localization-checker` — a repository with no
+migrations, no UI, or nothing to localize should not carry their reviewers. An agent
+missing from `.claude/agents/` means the profile says this product does not do that —
+fix the flag, re-run the installer, and the gate comes with it.
+
+Two different questions, do not conflate them: `ENABLE_*` in the install config asks
+whether this repo wants an integration at all (MCP ids, bundled skills, optional
+artifacts); `settings/product.yml` asks whether a property is true of the product.
+Either one saying no means the agent is not installed.
 
 ## Transparency rule (mandatory in autonomous, delegated, and `/loop` runs)
 - Every iteration/turn names the active skill(s)/subagent(s) it used or assumed, and why — per step when running unattended, not only at the end.

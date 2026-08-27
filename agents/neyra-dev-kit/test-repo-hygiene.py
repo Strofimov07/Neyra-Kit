@@ -84,6 +84,12 @@ class RepoHygiene(unittest.TestCase):
         self.assertEqual(_run(d, "--strict", "--exclude", "docs")[0], 0,
                          "excluding the whole directory clears the findings")
 
+    def test_link_inside_inline_code_is_syntax_not_a_link(self):
+        d = _repo({"docs/a.md": "write it as `[label](url)` and it renders\n"})
+        code, out = _run(d, "--strict")
+        self.assertNotIn("→ url", out, "a link inside a code span is syntax being shown")
+        self.assertEqual(code, 0)
+
     def test_clean_repo_is_clean(self):
         d = _repo({"README.md": "nothing to see\n"})
         code, out = _run(d, "--strict")

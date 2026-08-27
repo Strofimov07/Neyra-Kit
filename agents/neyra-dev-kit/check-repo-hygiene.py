@@ -46,6 +46,14 @@ TEMPLATE_RE = re.compile(r"(^|/)templates?/|\.tmpl$|\.example\.|\.template\.", r
 DOC_SAFE = ("192.0.2.", "198.51.100.", "203.0.113.")
 
 
+INLINE_CODE_RE = re.compile(r"(`+)(?:(?!\1).)*?\1")
+
+
+def strip_inline_code(line):
+    """Blank out `code` spans: a link written inside one is syntax being shown, not used."""
+    return INLINE_CODE_RE.sub(lambda m: " " * len(m.group(0)), line)
+
+
 def strip_fences(text):
     """Blank out fenced code blocks, preserving line count so line numbers stay true."""
     return FENCE_RE.sub(lambda m: "\n" * m.group(0).count("\n"), text)
@@ -165,6 +173,7 @@ def main():
             text = strip_fences(open(os.path.join(root, rel), encoding="utf-8", errors="ignore").read())
         except OSError:
             continue
+        text = "\n".join(strip_inline_code(l) for l in text.splitlines())
         for m in LINK_RE.finditer(text):
             target = m.group(1)
             if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target) or target.startswith(("//", "#", "{{")):

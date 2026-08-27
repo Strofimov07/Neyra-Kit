@@ -54,6 +54,43 @@ caller is prose with a shebang, and a new check gets dogfooded on this repositor
 merge — a report whose top entries are noise is the muted alert channel
 `launch-ops-baseline` warns about.
 
+## 2026-08-28 — The profile governs the agents that predate it (v0.43.0)
+
+**Context.** v0.41.0 let `settings/product.yml` select the six launch-layer agents, and
+the consumer's owner immediately asked the obvious next question: what about the rest?
+A repository with no database migrations still received `migration-safety`; one with no
+interface still received `design-system-conformance`; `post-merge-watch` and
+`pr-review-watch` shipped to repositories with no pipelines. That is the same defect the
+profile was built to fix, left in place for every agent older than the profile. Meanwhile
+the relevance of `contract-checker` and `localization-checker` was expressed twice — as
+`ENABLE_*` in the install config and as `CONTRACT_STACK` / `LOCALES` — in a layer that
+answers a different question than the profile does.
+
+**Decision.** Six properties join GATES: `db_migrations`, `user_facing_ui`,
+`typed_api_contract`, `analytics`, `ci_cd`, and `locales` (a list, where an empty one is
+as much a statement as `false`). They name **properties of the product**, never skills —
+putting skill names in the profile would make it a second install manifest, free to drift
+from `manifests/*.sh`. Templated agents are now governed too, with the boundary stated in
+the governance doc: `ENABLE_*` asks whether the repo wants an integration at all, the
+profile asks whether a property holds; either no means not installed. Agents that describe
+how an engineer works — `implementation-loop`, `pr-hygiene`, `verify-runtime`, `test-first`
+— are deliberately never conditional, and neither is `incident-runbook`.
+
+The drift report now separates **declared false** (the declaration contradicts the
+repository) from **absent** (the profile predates the flag and was never asked), because
+they call for different fixes and the kit's own rule is that absence is not false. Six new
+signatures back the new flags: a migrations directory, component files, schema/generated
+clients, analytics SDKs, pipeline definitions, locale catalogues.
+
+**Consequence.** An older profile keeps the pre-v0.43.0 install exactly, since only an
+explicit false (or an empty list) deselects. Installing for real surfaced one regression
+that no unit test would have: `test-portable-reviewers.py` read
+`.claude/agents/pr-review-watch.md` unconditionally, so a correct profile-driven install
+turned the consumer's own doctor red — it now skips when, and only when, the profile
+deselected that wrapper. Three gating tests pin the new behaviour (legacy agents follow
+the profile, an absent flag installs everything, templated agents obey), bringing
+`test-profile-gating.py` to 10 cases.
+
 ## 2026-08-28 — An installed artifact a consumer may decline (v0.42.0)
 
 **Context.** Upgrading a consumer to v0.41.0 restored `.github/workflows/doc-freshness.yml`,

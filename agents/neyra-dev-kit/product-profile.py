@@ -37,6 +37,15 @@ GATES = [
     ("long_jobs",        ["long-job-discipline"],             ["settings/facts/long-jobs.md"]),
     ("sells",            ["launch-compliance"],               []),
     ("in_production",    ["launch-ops-baseline", "incident-runbook"], ["settings/facts/incident-runbook.md"]),
+    # Properties that predate the launch layer. Their gates used to install
+    # everywhere: a repo with no migrations still got migration-safety, a repo with
+    # no UI still got design-system-conformance. Same problem the profile exists for.
+    ("db_migrations",     ["migration-safety"],                  []),
+    ("user_facing_ui",    ["design-system-conformance"],         []),
+    ("typed_api_contract", ["contract-doc-sync", "contract-checker"], []),
+    ("analytics",         ["analytics-instrumentation"],         []),
+    ("ci_cd",             ["post-merge-watch", "pr-review-watch"], []),
+    ("locales",           ["localization-checker"],              []),
 ]
 
 # Subagents this profile may switch OFF at install time. Deliberately restricted to
@@ -49,8 +58,15 @@ GATES = [
 # The install-time answer is derived from GATES, so the flag→agent mapping cannot
 # drift away from the flag→skill mapping the report prints.
 CONDITIONAL_LAYER = {
+    # launch layer (v0.41.0)
     "grounding-gate", "eval-baseline", "retrieval-review", "llm-cost-guard",
     "data-inventory", "long-job-discipline",
+    # pre-existing agents whose relevance is also a property of the product (v0.43.0).
+    # `incident-runbook` is deliberately NOT here: it predates the layer and stays
+    # unconditional, as v0.41.0 decided.
+    "migration-safety", "design-system-conformance", "contract-doc-sync",
+    "contract-checker", "analytics-instrumentation", "post-merge-watch",
+    "pr-review-watch", "localization-checker",
 }
 CONDITIONAL_AGENTS = {
     flag: [s for s in skills if s in CONDITIONAL_LAYER]
@@ -94,6 +110,26 @@ SIGNATURES = {
                    r"ip_address|user_agent)\b", re.I),
         # only where a data shape is defined — the word "email" appears everywhere
         re.compile(r"(models?|schema|entity|entities|migrations?|serializers?)", re.I)),
+    "db_migrations": (
+        None,
+        re.compile(r"(^|/)(migrations?|alembic|db/migrate|prisma/migrations)/", re.I)),
+    "user_facing_ui": (
+        None,
+        re.compile(r"\.(tsx|jsx|vue|svelte)$|(^|/)(components?|views?|screens?|pages?)/", re.I)),
+    "typed_api_contract": (
+        re.compile(r"\b(openapi|swagger|drf.spectacular|extend_schema|graphql_schema|"
+                   r"generated.client|zod|pydantic\.BaseModel)\b", re.I),
+        None),
+    "analytics": (
+        re.compile(r"\b(gtag|ga4|firebase/analytics|amplitude|mixpanel|posthog|segment|"
+                   r"appmetrica|track_event|logEvent)\b", re.I),
+        None),
+    "ci_cd": (
+        None,
+        re.compile(r"(^|/)(\.github/workflows|\.gitlab-ci\.yml|Jenkinsfile|\.circleci)", re.I)),
+    "locales": (
+        None,
+        re.compile(r"\.(po|mo|xliff|arb)$|(^|/)(locales?|i18n|translations?|lang)/", re.I)),
     "in_production": (
         None,
         re.compile(r"(\.github/workflows/.*deploy|docker-compose[.-].*prod|"
@@ -135,6 +171,27 @@ long_jobs: false
 # Carries real users or revenue on infrastructure you operate.
 in_production: false
 
+# --- Properties of the codebase. Each one turns its gate on; leaving a flag out
+# --- means "not answered yet", and the gate installs as it did before profiles.
+
+# Has database schema migrations.
+db_migrations: false
+
+# Has a user-facing interface (web, mobile, desktop).
+user_facing_ui: false
+
+# Exposes an API consumed through a typed contract (schema, generated client).
+typed_api_contract: false
+
+# Emits product analytics events.
+analytics: false
+
+# Has CI/CD pipelines whose result someone must watch.
+ci_cd: false
+
+# Locales the product ships. Empty list = nothing to localize.
+locales: []
+
 # Freshness contract. A profile nobody revisits is a profile that lies:
 # re-read the flags on this cadence and whenever a release turns one of them on.
 # ISO date, or "unset" until the first review.
@@ -175,11 +232,19 @@ def _tracked(root):
 
 
 def detect_drift(root, prof):
-    """Capabilities the code shows but the profile denies. Returns [(flag, [paths])]."""
+    """Capabilities the code shows but the profile does not claim.
+
+    Distinguishes the two cases, because they call for different fixes and the kit's
+    own rule is that an absent flag is unknown, not false:
+      * declared false — the declaration contradicts the repository;
+      * absent — the profile predates the flag and has never been asked the question.
+    Returns [(flag, declared, [paths])] where declared is "false" or "absent".
+    """
     files = _tracked(root)
     if not files:
         return []
     undeclared = [f for f, _sk, _fx in GATES if not prof.get(f) and f in SIGNATURES]
+    declared_as = {f: ("false" if f in prof else "absent") for f in undeclared}
     if not undeclared:
         return []
     hits = {f: [] for f in undeclared}
@@ -203,7 +268,7 @@ def detect_drift(root, prof):
                 continue
             if body_re.search(text):
                 hits[flag].append(rel)
-    return [(f, v) for f, v in hits.items() if v]
+    return [(f, declared_as[f], v) for f, v in hits.items() if v]
 
 
 def skip_agents(prof):
@@ -215,7 +280,12 @@ def skip_agents(prof):
     """
     off = []
     for flag, agents in CONDITIONAL_AGENTS.items():
-        if flag in prof and not prof[flag]:
+        if flag not in prof:
+            continue
+        value = prof[flag]
+        # `locales` is a list; an empty one is a real statement ("nothing to localize"),
+        # the same way `false` is for a boolean. Both mean: this gate does not apply.
+        if not value:
             off.extend(agents)
     return sorted(set(off))
 
@@ -319,12 +389,16 @@ def main():
     drift = detect_drift(root, prof)
     print("── declaration vs code")
     if drift:
-        for flag, paths in drift:
-            print("  %s: false — but the repository shows it, e.g.:" % flag)
+        for flag, declared, paths in drift:
+            if declared == "false":
+                print("  %s: false — but the repository shows it, e.g.:" % flag)
+            else:
+                print("  %s: not declared — but the repository shows it, e.g.:" % flag)
             for rel in paths:
                 print("      %s" % rel)
-        print("  either the flag is out of date (turn it on, the gate comes with it)")
-        print("  or the evidence is incidental — say which in the profile's comments")
+        print("  a false flag that the code contradicts is out of date; an undeclared one")
+        print("  has never been answered — add it. If the evidence is incidental, say so")
+        print("  in the profile's comments and set the flag deliberately.")
     else:
         print("  no undeclared capabilities found")
 

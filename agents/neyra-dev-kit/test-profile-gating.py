@@ -26,6 +26,12 @@ CONFIG = KIT / "configs" / "_product.example.sh"
 
 CONDITIONAL = ["grounding-gate", "eval-baseline", "retrieval-review",
                "llm-cost-guard", "data-inventory", "long-job-discipline"]
+# v0.43.0: agents that predate the launch layer but whose relevance is equally a
+# property of the product — a repo with no migrations should not carry migration-safety.
+CONDITIONAL_LEGACY = ["migration-safety", "design-system-conformance",
+                      "contract-doc-sync", "analytics-instrumentation",
+                      "post-merge-watch", "pr-review-watch"]
+TEMPLATED_CONDITIONAL = ["contract-checker", "localization-checker"]
 # Predates the launch layer: must be installed whatever the profile says.
 UNCONDITIONAL = "incident-runbook"
 
@@ -124,6 +130,39 @@ class ProfileGatingTests(unittest.TestCase):
                            capture_output=True, text=True)
         self.assertEqual(0, r.returncode, r.stdout + r.stderr)
         self.assertIn("out of scope", r.stdout)
+
+    def test_pg3_legacy_agents_follow_the_profile(self):
+        """A repo that declares no migrations and no UI should not carry their reviewers."""
+        _seed_profile(self.tmp, db_migrations=True)
+        self.assertEqual(0, _install(self.tmp).returncode)
+        self.assertTrue(_agent(self.tmp, "migration-safety").is_file())
+        self.assertFalse(_agent(self.tmp, "design-system-conformance").is_file(),
+                         "user_facing_ui: false must take design-system-conformance out")
+
+    def test_pg3_absent_legacy_flag_installs_everything(self):
+        """An older profile that predates these flags keeps the pre-v0.43.0 behaviour."""
+        seed = subprocess.run(["python3", str(PROFILE), "--seed"],
+                              capture_output=True, text=True, check=True).stdout
+        trimmed = "\n".join(l for l in seed.splitlines()
+                             if not l.startswith(("db_migrations:", "user_facing_ui:",
+                                                  "typed_api_contract:", "analytics:",
+                                                  "ci_cd:", "locales:")))
+        Path(self.tmp, "settings").mkdir(exist_ok=True)
+        Path(self.tmp, "settings/product.yml").write_text(trimmed, encoding="utf-8")
+        self.assertEqual(0, _install(self.tmp).returncode)
+        for name in CONDITIONAL_LEGACY:
+            self.assertTrue(_agent(self.tmp, name).is_file(),
+                            "absence is not false: %s must still install" % name)
+
+    def test_pg3_templated_agents_follow_the_profile(self):
+        """Templated agents are governed too — config and profile are different questions."""
+        _seed_profile(self.tmp, typed_api_contract=True)
+        r = _install(self.tmp)
+        self.assertEqual(0, r.returncode, r.stderr)
+        self.assertTrue(_agent(self.tmp, "contract-checker").is_file())
+        self.assertFalse(_agent(self.tmp, "localization-checker").is_file(),
+                         "empty locales list must take localization-checker out")
+        self.assertIn("localization-checker", r.stdout)
 
     def test_pg2_dry_run_removes_nothing(self):
         _seed_profile(self.tmp, generates_claims=True)
