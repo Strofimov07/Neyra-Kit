@@ -39,6 +39,12 @@ Prove that the shipped change works on the real surface, not only in static anal
   touched package — a targeted run stays green while a sibling mock drifts out of sync
   with the real signature, and CI catches it only after merge.
 
+- A repo often has **several independent suites** (unit, integration, end-to-end,
+  and a separate front-end runner) that no single command covers. Enumerate them
+  once, prefer a single verify entry point that runs all of them, and when you run
+  a subset, **name the suites you did not run** in the report. A suite nobody names
+  is assumed green by everyone.
+
 **Success criteria**
 - Basic breakage is ruled out before runtime validation.
 
@@ -77,6 +83,7 @@ Prove that the shipped change works on the real surface, not only in static anal
 
 | The excuse | Why it's wrong → what to do |
 |---|---|
+| "I ran the tests." | Which ones? Repos carry several independent suites and a subset run reads as full coverage. Name the ones you skipped (step 2). |
 | "It looks right in the diff." | Code review catches shape, not behavior. Run the real path. |
 | "The unit tests pass, so it works." | A green unit test is not a green surface. Exercise the endpoint/flow. |
 | "It's obviously correct." | "Obvious" changes are exactly the ones that ship broken. Verify anyway. |

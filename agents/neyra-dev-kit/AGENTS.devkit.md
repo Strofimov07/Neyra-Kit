@@ -49,6 +49,14 @@ start with `test-first` — a failing test (RED) before the change.
 | batch-migration | (manual — approval-gated) | explicit large mechanical migration delegation only |
 | goal-mode | (manual — opt-in) | autonomous goal orchestration — checkpointed, capped, Linear-anchored |
 | backlog-fleet | (manual — opt-in) | existing backlog → approved parallel batches → lanes, mid-flight independence re-check |
+| grounding-gate | grounding-gate | prompts / answer assembly / retrieval wiring / source corpus change |
+| retrieval-review | retrieval-review | query, filter, ranking, rerank, chunking or index-mapping change |
+| eval-baseline | eval-baseline | running or reporting an eval, benchmark, cost measurement or A/B |
+| llm-cost-guard | llm-cost-guard | metered-API call, prompt size, caching, retries or pricing change |
+| data-inventory | data-inventory | new store / log / analytics sink / third-party recipient; pre-launch data pass |
+| long-job-discipline | long-job-discipline | backfill, reindex, batch import or any work outliving a request |
+| launch-compliance | (manual — cadence) | pre-sale readiness: entity, agreement, data, money, disclosure, sector rules |
+| launch-ops-baseline | (manual — cadence) | pre-sale ops floor: off-host probe, expiries, alert channel, rehearsed restore |
 
 ## Transparency rule (mandatory in autonomous, delegated, and `/loop` runs)
 - Every iteration/turn names the active skill(s)/subagent(s) it used or assumed, and why — per step when running unattended, not only at the end.

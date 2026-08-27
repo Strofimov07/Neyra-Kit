@@ -4,6 +4,55 @@ This append-only log is authoritative from v0.27.0 onward. Historical decisions
 before the source cutover remain frozen in the legacy AI Browser checkout and
 are not an authoring surface.
 
+## 2026-08-27 — Product-launch gates: the kit learns that shipping is not selling (v0.40.0)
+
+**Context.** A consumer product passed every gate the kit had — plans, tests,
+reviews, contracts, migrations, release readiness — and was still not sellable.
+An independent audit and two internal structure audits landed the same verdict
+from three directions: the product answered from model memory instead of its own
+corpus and quoted superseded rules; measurements were compared across a silently
+changed instrument twice; unit cost was computed with a formula that misread the
+vendor's usage semantics by a fixed ~19%; thirteen non-code requirements
+(contracting entity, agreement shape, data handling, payment proof, disclosures)
+surfaced only after a year of development; retention existed on 2 of 15 stores
+and account deletion did not exist in code at all; the first backup of the
+primary datastore was taken a year in and never restored from; multi-hour jobs
+died on ordinary deploys; and one module reached 17k lines with 121 private
+symbols pinned by 98 test files, making a split a precondition for hiring. None
+of these classes had a skill, a rule, or a check anywhere in the kit — the
+existing 31 skills all assume the hard part is writing correct code.
+
+**Decision.** Add the missing layer as eight skills, three amendments, three
+checks, and one profile. New skills: `grounding-gate`, `eval-baseline`,
+`retrieval-review`, `llm-cost-guard` (product truthfulness and unit economics);
+`launch-compliance`, `data-inventory` (the non-code path to a first sale);
+`launch-ops-baseline`, `long-job-discipline` (operating it). Amendments:
+`security-review` gains untrusted-content-into-prompt as a taxonomy class,
+`regression-scout` requires replaying parser/extractor changes over populated
+real data, `verify-runtime` requires naming the suites that were not run.
+Enforcement over exhortation for the two failures that are structural rather
+than cognitive: `check-module-size.py` (module growth + tests pinning private
+symbols) and `check-repo-hygiene.py` (host addresses in tracked docs, committed
+build output, gitignore directory traps, broken relative links). `settings/product.yml`
+plus `product-profile.py` (which carries its own starter template under `--seed`) let a product declare what it is — sells, holds personal
+data, calls metered APIs, emits claims, has retrieval, runs long jobs, is in
+production — and the kit answers which gates are mandatory and which project-fact
+files are missing. `launch-compliance` and `launch-ops-baseline` are cadence
+skills with no auto-trigger surface, so they join MANUAL rather than shipping a
+subagent that would fire on unrelated diffs.
+
+**Consequence.** The kit now covers "is this sellable and operable", not only "is
+this correct". Jurisdiction and domain stay out of the shared layer by
+construction: `launch-compliance` owns the requirement taxonomy while the legal
+position lives in `settings/compliance/<jurisdiction>.md` authored by a qualified
+person, and `grounding-gate` / `retrieval-review` / `long-job-discipline` read
+their corpus, index, and runtime facts from `settings/facts/` — the same
+delegation the kit already applied to locales in v0.30. `lint-scope` confirms the
+new layer carries zero project facts. doctor gained two advisory reports (product
+profile, missing facts directory) that warn and never fail, so no existing
+consumer breaks on upgrade. The three new checks are advisory by default and fail
+only under `--strict`, because their thresholds are per-repo judgment, not policy.
+
 ## 2026-07-18 — Standalone Neyra-Kit becomes the canonical source (v0.27.0)
 
 **Context.** A shared Codex hooks correction had to be authored in the AI Browser

@@ -126,6 +126,26 @@ if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; t
   [ -f "$KIT/test-retire.py" ] && run "retire regression" python3 "$KIT/test-retire.py"
   [ -f "$KIT/test-reconcile.py" ] && run "reconcile regression" python3 "$KIT/test-reconcile.py"
 fi
+# ─────────────────────────────────────────────────────────────────────────────
+# Product profile + project-fact anchors (advisory — never fail the run).
+# A gate whose facts file is absent silently degrades to generic advice, which
+# is the "dead anchor" failure the kit already learned once: the skill routes
+# somewhere that does not exist and nobody sees the no-op.
+# ─────────────────────────────────────────────────────────────────────────────
+if [ -f "$KIT/product-profile.py" ]; then
+  echo "── product profile"
+  python3 "$KIT/product-profile.py" "$ROOT" || true
+fi
+if [ -d "$ROOT/agents/dev-skills" ] || [ -d "$ROOT/.claude/agents" ]; then
+  if grep -rqs "settings/facts" "$ROOT/agents/dev-skills" "$ROOT/.claude/agents" 2>/dev/null; then
+    if [ ! -d "$ROOT/settings/facts" ]; then
+      echo "── project facts"
+      echo "WARN: installed skills reference settings/facts/ but the directory does not exist —"
+      echo "      those skills degrade to generic advice. Create it and add the files they name."
+    fi
+  fi
+fi
+
 run "skills lint"          python3 "$KIT/lint-skills.py"
 run "skill-mapping regression" python3 "$KIT/test-check-skill-mapping.py"
 # NEB-1484: the portable-reviewer regression validates pr-review-watch + security-review —
