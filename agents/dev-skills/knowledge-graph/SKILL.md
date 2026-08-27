@@ -121,6 +121,14 @@ insurance, not the mechanism.
   decision, and marking the doc as an unimplemented proposal is the honest interim
   state, not a fix. Say which direction a `Drift` node is in its notes; the bare word
   does not distinguish them, and the two mislead in opposite ways.
+- **Volatile operational facts get one owner node, and the wiki is not exempt.** Host
+  addresses, endpoints, credentials' locations, and anything that changes when
+  infrastructure moves belong in a single map that is reviewed on purpose; every other
+  page names the thing and links there. Repository linters can enforce this in code;
+  the wiki has no such gate, which is exactly why it accumulates addresses of machines
+  that were decommissioned — and it is what a person reads before touching a server.
+  Treat a literal address outside the owner node as drift, and report it in the
+  freshness sweep.
 - This skill governs structure and freshness; it does not invent product facts —
   unknowns get an explicit `open question`, not a guess.
 - Writes to the external canon (Notion/wiki) are outward-facing — propose first,
