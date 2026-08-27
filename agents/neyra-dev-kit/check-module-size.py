@@ -14,9 +14,13 @@ prose gate catches:
 Advisory by default (exit 0, prints what it found); --strict makes violations
 fail. Thresholds are arguments, not policy: pick them per repo.
 
+Vendored code is excluded, and so is anything --exclude names: a report whose top
+entries are files nobody in this repo will ever split trains the reader to skip the
+report, which is the failure mode `launch-ops-baseline` names for alert channels.
+
 Usage:
   check-module-size.py [paths ...] [--max-lines N] [--top N] [--strict]
-                       [--tests-dir DIR ...]
+                       [--tests-dir DIR ...] [--exclude PATH-SUBSTRING ...]
 """
 import argparse
 import os
@@ -26,7 +30,9 @@ import sys
 
 SRC_EXT = {".py", ".ts", ".tsx", ".js", ".jsx", ".swift", ".kt", ".go", ".rb", ".java", ".cs", ".php", ".rs"}
 SKIP_DIRS = {".git", "node_modules", "dist", "build", "out", ".next", "vendor", "venv", ".venv",
-             "__pycache__", "migrations", "coverage", ".mypy_cache", ".pytest_cache"}
+             "__pycache__", "migrations", "coverage", ".mypy_cache", ".pytest_cache",
+             # vendored third-party trees: real, large, and not ours to split
+             "vendored", "third_party", "thirdparty", "external", "Pods", ".yarn"}
 
 # Patching a symbol whose name starts with "_" — the outside reaching into internals.
 PRIVATE_PATCH_RES = [
@@ -51,9 +57,11 @@ def tracked_files(root):
         return found
 
 
-def is_source(rel):
+def is_source(rel, excludes=()):
     parts = rel.split(os.sep)
     if any(p in SKIP_DIRS for p in parts):
+        return False
+    if any(x and x in rel for x in excludes):
         return False
     return os.path.splitext(rel)[1] in SRC_EXT
 
@@ -64,11 +72,16 @@ def main():
     ap.add_argument("--max-lines", type=int, default=1500)
     ap.add_argument("--top", type=int, default=5)
     ap.add_argument("--tests-dir", action="append", default=[])
+    ap.add_argument("--exclude", action="append", default=[],
+                    help="path substring to ignore (repeatable) — vendored or generated trees "
+                         "the repo does not author")
     ap.add_argument("--strict", action="store_true")
     a = ap.parse_args()
 
     root = a.paths[0] if a.paths else "."
-    files = [f for f in tracked_files(root) if is_source(f)]
+    files = [f for f in tracked_files(root) if is_source(f, a.exclude)]
+    if a.exclude:
+        print("── excluded: %s" % ", ".join(a.exclude))
     if not files:
         print("check-module-size: no source files found — nothing to check")
         return 0

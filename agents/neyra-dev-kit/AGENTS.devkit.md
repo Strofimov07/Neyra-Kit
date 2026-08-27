@@ -58,6 +58,11 @@ start with `test-first` — a failing test (RED) before the change.
 | launch-compliance | (manual — cadence) | pre-sale readiness: entity, agreement, data, money, disclosure, sector rules |
 | launch-ops-baseline | (manual — cadence) | pre-sale ops floor: off-host probe, expiries, alert channel, rehearsed restore |
 
+The last six auto-invocable rows are **profile-selected**: `settings/product.yml`
+declares what this product is, and the installer ships only the agents its flags turn
+on. An agent missing from `.claude/agents/` means the profile says this product does
+not do that — fix the flag, re-run the installer, and the gate comes with it.
+
 ## Transparency rule (mandatory in autonomous, delegated, and `/loop` runs)
 - Every iteration/turn names the active skill(s)/subagent(s) it used or assumed, and why — per step when running unattended, not only at the end.
 - Report subagent results faithfully: distinguish what was verified from what is still assumed. A green subagent report is not a substitute for the required final checks.

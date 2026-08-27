@@ -101,7 +101,36 @@ d = make_repo(ALL_FALSE.replace("last_reviewed: %s" % datetime.date.today().isof
 code, out = run(d)
 check("WARN no last_reviewed date" in out, "unset review date warns")
 
-# 7. --seed emits a profile this tool can read back
+# 7. --skip-agents: what the installer consumes
+d = make_repo(ALL_FALSE)
+code, out = run(d, "--skip-agents")
+off = set(out.split())
+check(code == 0 and off == {"grounding-gate", "eval-baseline", "retrieval-review",
+                            "llm-cost-guard", "data-inventory", "long-job-discipline"},
+      "all-false profile switches off exactly the conditional layer")
+check("incident-runbook" not in off,
+      "an agent that predates the launch layer is never switched off")
+
+d = make_repo(ALL_FALSE.replace("generates_claims: false", "generates_claims: true"))
+code, out = run(d, "--skip-agents")
+off = set(out.split())
+check("grounding-gate" not in off and "eval-baseline" not in off,
+      "a true flag keeps both of its agents")
+check("retrieval-review" in off, "unrelated flags stay off")
+
+# absent flag != false: an older profile must not silently uninstall an agent
+partial = "name: t\nsells: false\n"
+d = make_repo(partial)
+code, out = run(d, "--skip-agents")
+check(code == 0 and out.strip() == "",
+      "a profile that does not mention a flag switches nothing off")
+
+dd = tempfile.mkdtemp()
+subprocess.run(["git", "-C", dd, "init", "-q"], check=True)
+code, out = run(dd, "--skip-agents")
+check(code == 0 and out.strip() == "", "no profile switches nothing off (install everything)")
+
+# 8. --seed emits a profile this tool can read back
 r = subprocess.run([sys.executable, str(TOOL), "--seed"], capture_output=True, text=True)
 d = make_repo(r.stdout)
 code, out = run(d)

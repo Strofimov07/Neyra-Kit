@@ -15,7 +15,15 @@ instruction to a newcomer:
 
 Advisory by default; --strict fails. Nothing here is project-specific.
 
-Usage: check-repo-hygiene.py [repo] [--strict] [--docs-glob PATTERN ...]
+Two exemptions keep check 4 honest, because a link checker that cannot read markdown
+the way markdown is written produces findings nobody can act on:
+  - fenced code blocks are skipped — a link inside ```…``` is sample text showing what
+    someone should write elsewhere, not a link this repo makes;
+  - a template file (under templates/, or named *.tmpl / *.example.* / *.template.*)
+    resolves its relative links in the repository it is rendered INTO, so its links are
+    reported as unresolvable-here and not counted.
+
+Usage: check-repo-hygiene.py [repo] [--strict]
 """
 import argparse
 import ipaddress
@@ -28,8 +36,16 @@ IP_RE = re.compile(r"(?<![\w.])(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?![\w.])")
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)#?\s]+)")
 ARTIFACT_DIRS = ("dist/", "build/", "out/", ".next/", "coverage/", "node_modules/", ".output/")
 DOC_EXT = (".md", ".mdx", ".rst", ".txt")
+FENCE_RE = re.compile(r"(?ms)^\s*(```|~~~).*?(^\s*\1\s*$|\Z)")
+# A template renders somewhere else; its relative links resolve there, not here.
+TEMPLATE_RE = re.compile(r"(^|/)templates?/|\.tmpl$|\.example\.|\.template\.", re.I)
 # Documentation may legitimately show example addresses; these are reserved for docs.
 DOC_SAFE = ("192.0.2.", "198.51.100.", "203.0.113.")
+
+
+def strip_fences(text):
+    """Blank out fenced code blocks, preserving line count so line numbers stay true."""
+    return FENCE_RE.sub(lambda m: "\n" * m.group(0).count("\n"), text)
 
 
 def git(root, *args):
@@ -119,13 +135,17 @@ def main():
     # 4. broken relative links in tracked markdown
     print("── broken relative links in tracked markdown")
     broken = []
+    templated = 0
     tracked_set = set(tracked)
     for rel in tracked:
         if not rel.lower().endswith((".md", ".mdx")):
             continue
+        if TEMPLATE_RE.search(rel):
+            templated += 1
+            continue
         base = os.path.dirname(rel)
         try:
-            text = open(os.path.join(root, rel), encoding="utf-8", errors="ignore").read()
+            text = strip_fences(open(os.path.join(root, rel), encoding="utf-8", errors="ignore").read())
         except OSError:
             continue
         for m in LINK_RE.finditer(text):
@@ -145,6 +165,8 @@ def main():
         print("  documentation pointing at files that no longer exist describes a system that is gone")
     else:
         print("  none")
+    if templated:
+        print("  (%d template file(s) skipped — their links resolve in the rendered repo)" % templated)
 
     if a.strict and findings:
         print("check-repo-hygiene: FAIL (--strict), %d finding(s)" % findings)

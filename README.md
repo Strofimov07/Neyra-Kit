@@ -37,7 +37,7 @@ Evolution; installed copies are never promoted into a competing source.
 
 ## What's inside
 
-- **34 engineering skills** (`agents/dev-skills/`) — the full cycle:
+- **39 engineering skills** (`agents/dev-skills/`) — the full cycle:
   requirements elicitation (spec-elicitation, EARS) → written plans →
   test-first implementation → systematic debugging → code review → contract
   safety → localization → release readiness → regression scouting → incident

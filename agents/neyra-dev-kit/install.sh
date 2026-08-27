@@ -402,9 +402,55 @@ else
   say "no settings/skills/ — nothing to sync (add settings/skills/<id>/SKILL.md for a project-owned skill)"
 fi
 
+# --- profile-selected subagents (v0.41.0) --------------------------------------
+# A declaration that only *reports* which gates apply changes nothing: the agents it
+# says are irrelevant still get installed and still auto-fire. So the profile selects
+# the install set. Conservative by construction — no settings/product.yml, an
+# unreadable one, or a flag the profile does not mention all install everything, which
+# is exactly the pre-v0.41.0 behaviour every existing consumer already has.
+# The flag→agent table lives in product-profile.py (derived from GATES) so it cannot
+# drift from the report the same tool prints.
+SKIP_AGENTS=""
+if [[ -f "$KIT_DIR/product-profile.py" ]]; then
+  SKIP_AGENTS="$(python3 "$KIT_DIR/product-profile.py" "$TARGET" --skip-agents 2>/dev/null || true)"
+fi
+nk_agent_skipped() { [[ -n "$SKIP_AGENTS" ]] && printf '%s\n' "$SKIP_AGENTS" | grep -qxF -- "$1"; }
+
+# True when the installed copy is byte-identical to what THIS install would write, i.e.
+# an untouched kit file. Same policy as retire_managed_artifacts: never delete content a
+# human may have edited.
+nk_agent_pristine() { # nk_agent_pristine <agent> <installed-path>
+  local rendered; rendered="$(mktemp)"
+  cp "$CANON_AGENTS/$1.md" "$rendered" || { rm -f "$rendered"; return 1; }
+  [[ -n "$LINEAR_MCP_PREFIX" ]] && perl -pi -e "s/\Q{{LINEAR_MCP_PREFIX}}\E/$LINEAR_MCP_PREFIX/g" "$rendered"
+  [[ -n "${NOTION_MCP_PREFIX:-}" ]] && perl -pi -e "s/\Q{{NOTION_MCP_PREFIX}}\E/$NOTION_MCP_PREFIX/g" "$rendered"
+  [[ -n "${FIGMA_MCP_PREFIX:-}" ]] && perl -pi -e "s/\Q{{FIGMA_MCP_PREFIX}}\E/$FIGMA_MCP_PREFIX/g" "$rendered"
+  local same=1; cmp -s "$rendered" "$2" || same=0
+  rm -f "$rendered"
+  [[ $same -eq 1 ]]
+}
+
 echo "Layer A — portable subagents:"
 do_ "mkdir -p '$TARGET/.claude/agents'"
 for a in "${PORTABLE_AGENTS[@]}"; do
+  if nk_agent_skipped "$a"; then
+    # Declared irrelevant for this product. Remove a previously-installed pristine copy
+    # so flipping a flag to false actually takes the agent out of the repo; keep (and
+    # say so) anything edited locally.
+    inst="$TARGET/.claude/agents/$a.md"
+    if [[ -f "$inst" ]]; then
+      if nk_agent_pristine "$a" "$inst"; then
+        if [[ $DRY -eq 1 ]]; then say "[dry] remove $a (settings/product.yml declares it out of scope)"
+        elif rm -f "$inst"; then say "removed $a — settings/product.yml declares it out of scope"
+        else say "WARN: could not remove $inst"; fi
+      else
+        say "WARN: kept $a — out of scope per settings/product.yml but edited locally; remove by hand if intended"
+      fi
+    else
+      say "skipped $a — out of scope per settings/product.yml"
+    fi
+    continue
+  fi
   if [[ -f "$CANON_AGENTS/$a.md" ]]; then
     do_ "cp '$CANON_AGENTS/$a.md' '$TARGET/.claude/agents/$a.md'"
     # Published copies carry {{LINEAR_MCP_PREFIX}}/{{NOTION_MCP_PREFIX}}

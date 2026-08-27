@@ -16,9 +16,12 @@ young, the gates they imply stay off, and nothing says a word. So the profile
 also carries a review date, and this tool reads the code back to see whether the
 declaration still matches what the repository actually contains.
 
-Usage: product-profile.py [repo] [--strict] [--seed]
-  --strict: missing profile, missing fact files, a stale review, or an
-            undeclared capability found in the code exit non-zero.
+Usage: product-profile.py [repo] [--strict] [--seed] [--skip-agents]
+  --strict:      missing profile, missing fact files, a stale review, or an
+                 undeclared capability found in the code exit non-zero.
+  --skip-agents: machine-readable list of the conditional subagents this profile
+                 switches off, consumed by install.sh so a declaration actually
+                 selects what gets installed instead of only reporting it.
 """
 import argparse
 import os
@@ -35,6 +38,25 @@ GATES = [
     ("sells",            ["launch-compliance"],               []),
     ("in_production",    ["launch-ops-baseline", "incident-runbook"], ["settings/facts/incident-runbook.md"]),
 ]
+
+# Subagents this profile may switch OFF at install time. Deliberately restricted to
+# the domain-scoped agents introduced with the launch layer (v0.40.0): each is useful
+# only to a product that has the corresponding capability, and shipping it to a repo
+# that does not have one adds an auto-invocable agent that can only mis-fire.
+#
+# Everything that predates the launch layer stays unconditional — `incident-runbook`
+# appears in GATES under in_production but is a universal agent, so it is NOT here.
+# The install-time answer is derived from GATES, so the flag→agent mapping cannot
+# drift away from the flag→skill mapping the report prints.
+CONDITIONAL_LAYER = {
+    "grounding-gate", "eval-baseline", "retrieval-review", "llm-cost-guard",
+    "data-inventory", "long-job-discipline",
+}
+CONDITIONAL_AGENTS = {
+    flag: [s for s in skills if s in CONDITIONAL_LAYER]
+    for flag, skills, _files in GATES
+    if any(s in CONDITIONAL_LAYER for s in skills)
+}
 
 TRUE = {"true", "yes", "on", "1"}
 
@@ -184,6 +206,20 @@ def detect_drift(root, prof):
     return [(f, v) for f, v in hits.items() if v]
 
 
+def skip_agents(prof):
+    """Conditional subagents this profile switches off, sorted.
+
+    Conservative by construction: a flag that is *absent* from the profile is
+    unknown, not false — an older profile written before a flag existed must never
+    silently uninstall the agent that flag governs. Only an explicit false skips.
+    """
+    off = []
+    for flag, agents in CONDITIONAL_AGENTS.items():
+        if flag in prof and not prof[flag]:
+            off.extend(agents)
+    return sorted(set(off))
+
+
 def review_status(prof):
     """(state, detail) where state is 'ok' | 'unset' | 'stale' | 'unreadable'."""
     import datetime
@@ -210,12 +246,27 @@ def main():
     ap.add_argument("--strict", action="store_true")
     ap.add_argument("--seed", action="store_true",
                     help="print a starter profile to stdout (redirect it into settings/product.yml)")
+    ap.add_argument("--skip-agents", action="store_true",
+                    help="print the conditional subagents this profile switches off, one per "
+                         "line (empty when there is no profile — absent means install everything)")
     a = ap.parse_args()
     if a.seed:
         print(TEMPLATE, end="")
         return 0
     root = os.path.abspath(a.repo)
     path = os.path.join(root, "settings", "product.yml")
+
+    if a.skip_agents:
+        # Machine-readable, silent on every failure path: no profile, unreadable
+        # profile, or nothing switched off all print nothing and exit 0, so a caller
+        # can never mistake a broken read for "the product has no capabilities".
+        if os.path.isfile(path):
+            try:
+                for name in skip_agents(parse_profile(path)):
+                    print(name)
+            except OSError:
+                pass
+        return 0
 
     if not os.path.isfile(path):
         print("no settings/product.yml — the kit cannot tell which gates this product needs.")

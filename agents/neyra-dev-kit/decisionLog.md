@@ -4,6 +4,56 @@ This append-only log is authoritative from v0.27.0 onward. Historical decisions
 before the source cutover remain frozen in the legacy AI Browser checkout and
 are not an authoring surface.
 
+## 2026-08-28 — The launch layer gets a contour: the profile selects, the checks run (v0.41.0)
+
+**Context.** A review of v0.40.0 found the layer correct in content and unwired in
+mechanism. `product-profile.py` printed "mandatory gates for this profile", and nothing
+consumed the answer: `install.sh` shipped all six new subagents to every repository
+regardless of the declaration, no hook read the file, and `kit-onboarding` — the one
+place a consumer is walked through `settings/` — was never updated, so a fresh install
+had no `settings/product.yml` at all and the whole selection mechanism was inert. In the
+same shape, `check-module-size.py` and `check-repo-hygiene.py` were copied into consumers
+with zero call sites: not in doctor, not in a hook, not named by any skill, so an agent
+working in a consumer repo had no way to learn they existed. Run on this repository they
+also reported mostly noise — two vendored design-skill bundles as oversized modules, and
+template files plus a link inside a fenced code block as broken links.
+
+**Decision.** Give the layer its contour, in the three places it was missing.
+
+`install.sh` now consumes `product-profile.py --skip-agents` and installs only the agents
+the profile turns on. The flag→agent table is derived from `GATES` inside
+`product-profile.py`, so it cannot drift from the report that same tool prints, and it is
+restricted to the six domain-scoped agents the launch layer introduced — `incident-runbook`
+appears in `GATES` under `in_production` but predates the layer and stays unconditional, so
+no repository loses an agent it had before this version. Absence is never "false": no
+profile, an unreadable one, or a flag the profile does not mention all install everything,
+which is exactly the pre-v0.41.0 behaviour. Flipping a flag off removes an *unmodified*
+copy and keeps (with a warning) one edited locally — the same policy the retirement pass
+already applies to kit files, because the alternative is an installer that deletes someone's
+work. `test-profile-gating.py` pins all of it against a real install, including the
+dry-run and edited-file paths.
+
+`kit-onboarding` gained the step that was missing: seed `settings/product.yml` from
+`--seed`, walk the flags one at a time, stamp `last_reviewed`, re-run the installer so the
+agent set matches the declaration, then create one facts file per gate switched on. A flag
+answered wrong there now silently removes a gate, so the step says so.
+
+doctor runs both checks, advisory, never failing — their thresholds are per-repo judgment,
+so `--strict` stays a deliberate CI choice. The false positives were fixed as generic
+behaviour in the tools (vendored trees and an `--exclude` list; fenced code blocks and
+template files, whose relative links resolve in the repository they render into) while the
+kit-specific paths live in the caller, in doctor. The one real finding the link check had
+buried — a dead pointer into the retired legacy checkout in `agents/product-skills/README.md`
+— is fixed, and both READMEs' hand-maintained skill counts were wrong before this branch
+(26/34 against 39 actual) and are corrected.
+
+**Consequence.** A declaration now changes what is installed rather than only what is
+reported, and the two structural checks are reachable from the command every consumer
+already runs. The general lesson is recorded as a signal: a check that ships without a
+caller is prose with a shebang, and a new check gets dogfooded on this repository before
+merge — a report whose top entries are noise is the muted alert channel
+`launch-ops-baseline` warns about.
+
 ## 2026-08-27 — Product-launch gates: the kit learns that shipping is not selling (v0.40.0)
 
 **Context.** A consumer product passed every gate the kit had — plans, tests,

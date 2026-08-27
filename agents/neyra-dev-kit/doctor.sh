@@ -126,6 +126,7 @@ if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; t
   [ -f "$KIT/test-retire.py" ] && run "retire regression" python3 "$KIT/test-retire.py"
   [ -f "$KIT/test-reconcile.py" ] && run "reconcile regression" python3 "$KIT/test-reconcile.py"
   [ -f "$KIT/test-product-profile.py" ] && run "product-profile regression" python3 "$KIT/test-product-profile.py"
+  [ -f "$KIT/test-profile-gating.py" ] && run "profile-gating regression" python3 "$KIT/test-profile-gating.py"
 fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Product profile + project-fact anchors (advisory — never fail the run).
@@ -136,6 +137,21 @@ fi
 if [ -f "$KIT/product-profile.py" ]; then
   echo "── product profile"
   python3 "$KIT/product-profile.py" "$ROOT" || true
+fi
+# Structural drift, advisory (v0.41.0). These two shipped in v0.40.0 with no caller,
+# which made them unreachable: an agent in a consumer repo has no way to learn a script
+# exists. Reported here, never fail the run — their thresholds are per-repo judgment,
+# so --strict stays a deliberate CI choice, not a default.
+# The kit's own vendored design-skill bundles are excluded by the CALLER: the tool stays
+# generic, the paths that are kit-specific live here.
+if [ -f "$KIT/check-repo-hygiene.py" ]; then
+  echo "── repo hygiene (advisory)"
+  python3 "$KIT/check-repo-hygiene.py" "$ROOT" || true
+fi
+if [ -f "$KIT/check-module-size.py" ]; then
+  echo "── modularity drift (advisory)"
+  python3 "$KIT/check-module-size.py" "$ROOT" \
+    --exclude agents/design-skills --exclude .claude/skills || true
 fi
 if [ -d "$ROOT/agents/dev-skills" ] || [ -d "$ROOT/.claude/agents" ]; then
   if grep -rqs "settings/facts" "$ROOT/agents/dev-skills" "$ROOT/.claude/agents" 2>/dev/null; then

@@ -18,4 +18,4 @@ This directory is the **authoritative copy** of the product/growth/finance role 
 
 **Do not** edit only under `.cursor/skills/` — those entries are symlinks to here.
 
-See **[Multi-agent runtimes](../../docs/neyra-ai-skills/multi-agent-runtimes.md)** for Cursor, Codex, Claude Code, and other adapters.
+Runtime adapters for Cursor, Codex, and Claude Code ship with the kit — see [agents/neyra-dev-kit/README.md](../neyra-dev-kit/README.md) and the hooks under `agents/neyra-dev-kit/hooks/`.
