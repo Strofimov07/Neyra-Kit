@@ -4,8 +4,11 @@
 Each check is a class of defect that reads as harmless to the author and as an
 instruction to a newcomer:
 
-1. Host addresses in tracked documentation — a decommissioned address in a
-   runbook sends someone to connect to a machine that is no longer yours.
+1. Public host addresses in tracked documentation — a decommissioned address in
+   a runbook sends someone to connect to a machine that is no longer yours, and
+   a live one ages into that state the day the host is replaced. Private-range
+   addresses (internal networks, container subnets) are listed separately and do
+   not count as findings: they describe internal topology, not a way in.
 2. Build artifacts in the index — a stale committed bundle is what tooling
    mounts and serves, so the repo shows an old build with no failing signal.
 3. gitignore directory traps — a directory ignored while files inside it are
@@ -56,19 +59,25 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("repo", nargs="?", default=".")
     ap.add_argument("--strict", action="store_true")
+    ap.add_argument("--exclude", action="append", default=[],
+                    help="path prefix to skip (repeatable), e.g. a deliberate host map")
     a = ap.parse_args()
     root = os.path.abspath(a.repo)
+    excluded = tuple(e.strip("/") for e in a.exclude if e.strip("/"))
+
+    def skip(rel):
+        return any(rel == e or rel.startswith(e + "/") for e in excluded)
 
     r = git(root, "ls-files", "-z")
     if r.returncode != 0:
         print("check-repo-hygiene: not a git repository — skipping")
         return 0
-    tracked = [f for f in r.stdout.split("\0") if f]
+    tracked = [f for f in r.stdout.split("\0") if f and not skip(f)]
     findings = 0
 
     # 1. host addresses in tracked docs
     print("── host addresses in tracked documentation")
-    hits = []
+    hits, internal = [], []
     for rel in tracked:
         if not rel.lower().endswith(DOC_EXT):
             continue
@@ -87,6 +96,9 @@ def main():
                     continue
                 if ip.is_loopback or ip.is_unspecified or ip.is_multicast:
                     continue
+                if ip.is_private or ip.is_link_local or ip.is_reserved:
+                    internal.append((rel, lineno, val))
+                    continue
                 hits.append((rel, lineno, val))
     if hits:
         findings += len(hits)
@@ -94,9 +106,14 @@ def main():
             print("  %s:%d: %s" % (rel, lineno, val))
         if len(hits) > 10:
             print("  … %d more" % (len(hits) - 10))
-        print("  verify each address still belongs to you; a dead one is a wrong-machine instruction")
+        print("  verify each address still belongs to you; a dead one is a wrong-machine")
+        print("  instruction, and a live one becomes that on the next migration — prefer a name")
     else:
         print("  none")
+    if internal:
+        seen = sorted({v for _r, _l, v in internal})
+        print("  (%d internal-range mention(s), not counted: %s)"
+              % (len(internal), ", ".join(seen[:6]) + (" …" if len(seen) > 6 else "")))
 
     # 2. build artifacts in the index
     print("── build artifacts tracked in git")

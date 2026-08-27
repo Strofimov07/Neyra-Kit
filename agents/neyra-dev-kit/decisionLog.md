@@ -54,6 +54,32 @@ caller is prose with a shebang, and a new check gets dogfooded on this repositor
 merge — a report whose top entries are noise is the muted alert channel
 `launch-ops-baseline` warns about.
 
+## 2026-08-28 — An installed artifact a consumer may decline (v0.42.0)
+
+**Context.** Upgrading a consumer to v0.41.0 restored `.github/workflows/doc-freshness.yml`,
+which that repository had deleted deliberately months earlier while cutting CI cost. The
+scaffold copies the workflow whenever it is absent, and absence cannot distinguish "not yet
+installed" from "removed on purpose" — so the installer overrode a decision it could not
+see, every upgrade, silently. The v0.41.0 trigger widening (`paths: ['**']`, correct for
+repos that use it) made the cost concrete: a job on every PR the consumer had dropped.
+Separately, the hygiene check reported container subnets and internal addresses alongside
+public ones, so a third of its findings on a real repository were internal topology — the
+fastest way to teach people to ignore a check.
+
+**Decision.** `ENABLE_DOC_FRESHNESS_WORKFLOW` (default 1) puts the choice in the consumer
+config, where it survives upgrades. Switching it off retires an unmodified copy and keeps an
+edited one — the same policy the retirement and profile-gating passes already use. The
+hygiene check now separates public addresses (findings) from private, link-local, and
+reserved ranges (listed, not counted); documentation-reserved ranges stay excluded as
+examples. Both are pinned: `test-optional-artifacts.py` (5 cases against a real install)
+and `test-repo-hygiene.py` (6 cases), both run from doctor.
+
+**Consequence.** Any future optional artifact has a pattern to follow: default on, declinable
+in config, retire-if-unmodified. The alternative — a marker file listing declined artifacts —
+stays available if the count grows, but one toggle does not justify a registry. The hygiene
+check's finding count drops on repositories that document internal networks, which is the
+point: what remains is what someone could actually act on wrongly.
+
 ## 2026-08-27 — Product-launch gates: the kit learns that shipping is not selling (v0.40.0)
 
 **Context.** A consumer product passed every gate the kit had — plans, tests,
