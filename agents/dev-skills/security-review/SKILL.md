@@ -75,6 +75,13 @@ Check the diff for each, using the technologies present in the target repo:
 
 - **Injection** — SQL (`.raw()`, `.extra()`, `RawSQL`, string-built queries),
   command (`os.system`, `subprocess(..., shell=True)`), template/log injection.
+- **Untrusted content reaching a model prompt** — text the system did not author
+  (uploaded documents, fetched pages, third-party API payloads, user-stored notes)
+  concatenated into a prompt or tool-calling context. Treat it as data, never as
+  instructions: check that it passes a sanitizer at a single chokepoint, that
+  instructions inside it cannot re-scope the model's tools or authority, and that
+  content-derived URLs/recipients are not acted on. A per-call-site sanitizer that
+  new call sites can forget is a gap — name the chokepoint.
 - **Broken access control / IDOR** — object fetched by id without an owner/tenant
   check; DRF view missing `permission_classes` or using `AllowAny`; `@csrf_exempt`;
   mass-assignment via serializer `fields = '__all__'`; privilege escalation.
@@ -143,6 +150,7 @@ radius / hard preconditions. Rank output most-severe first.
 | "It's a tiny diff, no security code changed." | One added line can be the whole injection. A new sink on an old tainted path is new exposure. Review it. |
 | "We'll do a security pass before launch." | This diff ships now. Review now, not against a launch that may never get a pass. |
 | "It's probably fine / low risk." | "Probably" isn't a taint analysis. Either trace the path and refute it, or report it. |
+| "The document text is just data, the model won't follow it." | Instruction-shaped text in a prompt is executed by construction; that is the vulnerability class, not an edge case. Check the chokepoint. |
 | "The new hardened helper is in, so that vector's closed." | Only for callers actually moved onto it. Grep the old primitive's consumers — one left behind keeps the bypass alive. |
 
 ## Output

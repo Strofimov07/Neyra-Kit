@@ -125,7 +125,44 @@ if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; t
   run "canonical leak scan" python3 "$KIT/check-external-leaks.py" "$ROOT"
   [ -f "$KIT/test-retire.py" ] && run "retire regression" python3 "$KIT/test-retire.py"
   [ -f "$KIT/test-reconcile.py" ] && run "reconcile regression" python3 "$KIT/test-reconcile.py"
+  [ -f "$KIT/test-product-profile.py" ] && run "product-profile regression" python3 "$KIT/test-product-profile.py"
+  [ -f "$KIT/test-profile-gating.py" ] && run "profile-gating regression" python3 "$KIT/test-profile-gating.py"
 fi
+# ─────────────────────────────────────────────────────────────────────────────
+# Product profile + project-fact anchors (advisory — never fail the run).
+# A gate whose facts file is absent silently degrades to generic advice, which
+# is the "dead anchor" failure the kit already learned once: the skill routes
+# somewhere that does not exist and nobody sees the no-op.
+# ─────────────────────────────────────────────────────────────────────────────
+if [ -f "$KIT/product-profile.py" ]; then
+  echo "── product profile"
+  python3 "$KIT/product-profile.py" "$ROOT" || true
+fi
+# Structural drift, advisory (v0.41.0). These two shipped in v0.40.0 with no caller,
+# which made them unreachable: an agent in a consumer repo has no way to learn a script
+# exists. Reported here, never fail the run — their thresholds are per-repo judgment,
+# so --strict stays a deliberate CI choice, not a default.
+# The kit's own vendored design-skill bundles are excluded by the CALLER: the tool stays
+# generic, the paths that are kit-specific live here.
+if [ -f "$KIT/check-repo-hygiene.py" ]; then
+  echo "── repo hygiene (advisory)"
+  python3 "$KIT/check-repo-hygiene.py" "$ROOT" || true
+fi
+if [ -f "$KIT/check-module-size.py" ]; then
+  echo "── modularity drift (advisory)"
+  python3 "$KIT/check-module-size.py" "$ROOT" \
+    --exclude agents/design-skills --exclude .claude/skills || true
+fi
+if [ -d "$ROOT/agents/dev-skills" ] || [ -d "$ROOT/.claude/agents" ]; then
+  if grep -rqs "settings/facts" "$ROOT/agents/dev-skills" "$ROOT/.claude/agents" 2>/dev/null; then
+    if [ ! -d "$ROOT/settings/facts" ]; then
+      echo "── project facts"
+      echo "WARN: installed skills reference settings/facts/ but the directory does not exist —"
+      echo "      those skills degrade to generic advice. Create it and add the files they name."
+    fi
+  fi
+fi
+
 run "skills lint"          python3 "$KIT/lint-skills.py"
 run "skill-mapping regression" python3 "$KIT/test-check-skill-mapping.py"
 # NEB-1484: the portable-reviewer regression validates pr-review-watch + security-review —

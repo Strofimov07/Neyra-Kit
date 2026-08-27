@@ -1,6 +1,6 @@
 ---
 name: kit-onboarding
-description: Interactive kit setup interview after install — fills everything the kit needs to work at full quality in this repo/workspace: install config (stack, build/verify command, locales, contract convention, tracker workspace/routing, per-user MCP prefixes), settings/ scope (CONNECTORS.md, facts, brand), and cadences. Use right after installing the kit into a repo, when the session-start bootstrap flags "installed but not onboarded", or when the user asks to (re)configure the kit.
+description: Interactive kit setup interview after install — fills everything the kit needs to work at full quality in this repo/workspace: install config (stack, build/verify command, locales, contract convention, tracker workspace/routing, per-user MCP prefixes), the product profile (settings/product.yml — the flags that decide which subagents install and which gates are mandatory), settings/ scope (CONNECTORS.md, facts, compliance, brand), and cadences. Use right after installing the kit into a repo, when the session-start bootstrap flags "installed but not onboarded", or when the user asks to (re)configure the kit.
 tools: Read, Grep, Glob, Bash, Write, Edit
 model: sonnet
 ---
@@ -32,20 +32,38 @@ never re-ask what's filled in; confirm, don't interrogate).
    template with their answers; re-run
    `agents/neyra-dev-kit/install.sh <kit> . settings/configs/<repo>.sh` so
    templated agents and placeholders render with the real values.
-5. **settings/ scope** — create from the answers, not as empty stubs:
+5. **Product profile** — `settings/product.yml`, seeded with
+   `python3 agents/neyra-dev-kit/product-profile.py --seed > settings/product.yml`,
+   then walk its flags one at a time (sells / personal_data / metered_apis /
+   generates_claims / retrieval / long_jobs / in_production, plus the
+   jurisdictions list). This is not paperwork: the flags decide which subagents
+   get installed at all and which gates are mandatory, so a wrong `false` here
+   silently removes a gate. Stamp `last_reviewed` with today's date.
+   Then re-run install so the agent set matches what they just declared, and
+   run `python3 agents/neyra-dev-kit/product-profile.py .` — it names the
+   project-fact files the enabled gates read and reports any capability the code
+   shows while the profile denies it.
+6. **settings/ scope** — create from the answers, not as empty stubs:
    `settings/CONNECTORS.md` (walk the source table: tracker / VCS+CI / docs /
    billing / incidents / satisfaction — mark each wired | manual-CSV | absent),
    `settings/facts/incident-runbook.md` (ask: any known recurring production
    failure? seed it, else leave the template header),
    `settings/brand.md` (product name, naming rules, tone constraints —
    or "no brand rules yet").
-6. **mgmt kit extras** (only if mgmt kit installed) — reporting cadence
+   Plus one file per gate the profile switched on, because a gate whose facts
+   file is absent degrades to generic advice: `settings/facts/grounding.md`
+   (corpus, its id and effective-date fields, refusal copy),
+   `settings/facts/retrieval.md` (index and field names, caps, analyzers),
+   `settings/facts/long-jobs.md` (how a job is launched and where), and
+   `settings/compliance/<jurisdiction>.md` per declared market — that last one
+   is a placeholder with a named human owner, never content you author.
+7. **mgmt kit extras** (only if mgmt kit installed) — reporting cadence
    (weekly pulse / monthly deep), which teams/streams to cover, OKR anchor
    source (strategy doc / tracker projects), and whether personal mode will
    be used → if yes, create `settings/private/` and verify it is gitignored
    (add the ignore line if missing; refuse to proceed with personal mode
    until it is).
-7. **Verify** — run `agents/neyra-dev-kit/doctor.sh`; grep the rendered
+8. **Verify** — run `agents/neyra-dev-kit/doctor.sh`; grep the rendered
    agents for leftover `{{`placeholders`}}`; confirm the build/verify command
    actually executes (dry). Report: what's configured, what's deliberately
    skipped, the first suggested real run (e.g. "team-health-check weekly

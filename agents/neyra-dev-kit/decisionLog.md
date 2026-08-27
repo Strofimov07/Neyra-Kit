@@ -4,6 +4,120 @@ This append-only log is authoritative from v0.27.0 onward. Historical decisions
 before the source cutover remain frozen in the legacy AI Browser checkout and
 are not an authoring surface.
 
+## 2026-08-28 — The launch layer gets a contour: the profile selects, the checks run (v0.41.0)
+
+**Context.** A review of v0.40.0 found the layer correct in content and unwired in
+mechanism. `product-profile.py` printed "mandatory gates for this profile", and nothing
+consumed the answer: `install.sh` shipped all six new subagents to every repository
+regardless of the declaration, no hook read the file, and `kit-onboarding` — the one
+place a consumer is walked through `settings/` — was never updated, so a fresh install
+had no `settings/product.yml` at all and the whole selection mechanism was inert. In the
+same shape, `check-module-size.py` and `check-repo-hygiene.py` were copied into consumers
+with zero call sites: not in doctor, not in a hook, not named by any skill, so an agent
+working in a consumer repo had no way to learn they existed. Run on this repository they
+also reported mostly noise — two vendored design-skill bundles as oversized modules, and
+template files plus a link inside a fenced code block as broken links.
+
+**Decision.** Give the layer its contour, in the three places it was missing.
+
+`install.sh` now consumes `product-profile.py --skip-agents` and installs only the agents
+the profile turns on. The flag→agent table is derived from `GATES` inside
+`product-profile.py`, so it cannot drift from the report that same tool prints, and it is
+restricted to the six domain-scoped agents the launch layer introduced — `incident-runbook`
+appears in `GATES` under `in_production` but predates the layer and stays unconditional, so
+no repository loses an agent it had before this version. Absence is never "false": no
+profile, an unreadable one, or a flag the profile does not mention all install everything,
+which is exactly the pre-v0.41.0 behaviour. Flipping a flag off removes an *unmodified*
+copy and keeps (with a warning) one edited locally — the same policy the retirement pass
+already applies to kit files, because the alternative is an installer that deletes someone's
+work. `test-profile-gating.py` pins all of it against a real install, including the
+dry-run and edited-file paths.
+
+`kit-onboarding` gained the step that was missing: seed `settings/product.yml` from
+`--seed`, walk the flags one at a time, stamp `last_reviewed`, re-run the installer so the
+agent set matches the declaration, then create one facts file per gate switched on. A flag
+answered wrong there now silently removes a gate, so the step says so.
+
+doctor runs both checks, advisory, never failing — their thresholds are per-repo judgment,
+so `--strict` stays a deliberate CI choice. The false positives were fixed as generic
+behaviour in the tools (vendored trees and an `--exclude` list; fenced code blocks and
+template files, whose relative links resolve in the repository they render into) while the
+kit-specific paths live in the caller, in doctor. The one real finding the link check had
+buried — a dead pointer into the retired legacy checkout in `agents/product-skills/README.md`
+— is fixed, and both READMEs' hand-maintained skill counts were wrong before this branch
+(26/34 against 39 actual) and are corrected.
+
+**Consequence.** A declaration now changes what is installed rather than only what is
+reported, and the two structural checks are reachable from the command every consumer
+already runs. The general lesson is recorded as a signal: a check that ships without a
+caller is prose with a shebang, and a new check gets dogfooded on this repository before
+merge — a report whose top entries are noise is the muted alert channel
+`launch-ops-baseline` warns about.
+
+## 2026-08-27 — Product-launch gates: the kit learns that shipping is not selling (v0.40.0)
+
+**Context.** A consumer product passed every gate the kit had — plans, tests,
+reviews, contracts, migrations, release readiness — and was still not sellable.
+An independent audit and two internal structure audits landed the same verdict
+from three directions: the product answered from model memory instead of its own
+corpus and quoted superseded rules; measurements were compared across a silently
+changed instrument twice; unit cost was computed with a formula that misread the
+vendor's usage semantics by a fixed ~19%; thirteen non-code requirements
+(contracting entity, agreement shape, data handling, payment proof, disclosures)
+surfaced only after a year of development; retention existed on 2 of 15 stores
+and account deletion did not exist in code at all; the first backup of the
+primary datastore was taken a year in and never restored from; multi-hour jobs
+died on ordinary deploys; and one module reached 17k lines with 121 private
+symbols pinned by 98 test files, making a split a precondition for hiring. None
+of these classes had a skill, a rule, or a check anywhere in the kit — the
+existing 31 skills all assume the hard part is writing correct code.
+
+**Decision.** Add the missing layer as eight skills, three amendments, three
+checks, and one profile. New skills: `grounding-gate`, `eval-baseline`,
+`retrieval-review`, `llm-cost-guard` (product truthfulness and unit economics);
+`launch-compliance`, `data-inventory` (the non-code path to a first sale);
+`launch-ops-baseline`, `long-job-discipline` (operating it). Amendments:
+`security-review` gains untrusted-content-into-prompt as a taxonomy class,
+`regression-scout` requires replaying parser/extractor changes over populated
+real data, `verify-runtime` requires naming the suites that were not run.
+Enforcement over exhortation for the two failures that are structural rather
+than cognitive: `check-module-size.py` (module growth + tests pinning private
+symbols) and `check-repo-hygiene.py` (host addresses in tracked docs, committed
+build output, gitignore directory traps, broken relative links). `settings/product.yml`
+plus `product-profile.py` (which carries its own starter template under `--seed`) let a product declare what it is — sells, holds personal
+data, calls metered APIs, emits claims, has retrieval, runs long jobs, is in
+production — and the kit answers which gates are mandatory and which project-fact
+files are missing. `launch-compliance` and `launch-ops-baseline` are cadence
+skills with no auto-trigger surface, so they join MANUAL rather than shipping a
+subagent that would fire on unrelated diffs.
+
+The profile itself needed the same treatment it was built to give: a declaration
+with no freshness contract rots exactly like a runbook naming a decommissioned
+host. So it carries `last_reviewed` + `review_after_days` (default 90), and
+`product-profile.py` reads the code back — reporting capabilities the repository
+demonstrably has while the profile denies them (a metered-API SDK, a payment
+integration, a personal-data field in a model, a deploy pipeline). The check runs
+in one direction only: declared-false-but-present is a finding, declared-true-
+without-evidence is not, because a gate switched on early is the safe side. Three
+skills now carry the update trigger at the moments a capability actually appears:
+`launch-compliance` (new market, data category, payment method, subprocessor),
+`data-inventory` (first personal-data store or first recipient abroad), and
+`release-readiness` (the release that turns any of them on). `test-product-profile.py`
+pins all of it, including the scoping that keeps the word "email" in prose from
+tripping the personal-data signature.
+
+**Consequence.** The kit now covers "is this sellable and operable", not only "is
+this correct". Jurisdiction and domain stay out of the shared layer by
+construction: `launch-compliance` owns the requirement taxonomy while the legal
+position lives in `settings/compliance/<jurisdiction>.md` authored by a qualified
+person, and `grounding-gate` / `retrieval-review` / `long-job-discipline` read
+their corpus, index, and runtime facts from `settings/facts/` — the same
+delegation the kit already applied to locales in v0.30. `lint-scope` confirms the
+new layer carries zero project facts. doctor gained two advisory reports (product
+profile, missing facts directory) that warn and never fail, so no existing
+consumer breaks on upgrade. The three new checks are advisory by default and fail
+only under `--strict`, because their thresholds are per-repo judgment, not policy.
+
 ## 2026-07-18 — Standalone Neyra-Kit becomes the canonical source (v0.27.0)
 
 **Context.** A shared Codex hooks correction had to be authored in the AI Browser

@@ -17,12 +17,39 @@ import sys
 # dev-skills intentionally without an auto-invocable subagent (documented manual).
 # batch-migration stays manual: it's approval-gated (only on explicit delegation).
 # goal-mode is opt-in autonomous orchestration — invoked explicitly, never auto.
-MANUAL = {"batch-migration", "goal-mode", "backlog-fleet"}
+MANUAL = {
+    "batch-migration",
+    "goal-mode",
+    "backlog-fleet",
+    "launch-compliance",
+    "launch-ops-baseline",
+}
 # Rendered per-repo by install.sh only when enabled in the consumer's config —
 # keep in sync with TEMPLATED_AGENTS in manifests/*.sh.
 TEMPLATED = {"linear-router", "localization-checker", "contract-checker"}
 
 REF_RE = re.compile(r"agents/dev-skills/([a-z0-9-]+)")
+
+
+def profile_deselected(root):
+    """Subagents settings/product.yml switched off for this repo (v0.41.0).
+
+    The mapping table is rendered from the canonical template and lists every row, so
+    in a consumer an agent the profile declared out of scope is legitimately absent —
+    the same situation as a templated agent disabled at install, and not drift. Asks
+    product-profile.py rather than re-encoding the flag→agent table, so the two cannot
+    disagree. Any failure returns the empty set, which keeps the check strict.
+    """
+    tool = os.path.join(root, "agents/neyra-dev-kit/product-profile.py")
+    if not os.path.isfile(tool) or not os.path.isfile(os.path.join(root, "settings", "product.yml")):
+        return set()
+    try:
+        import subprocess
+        out = subprocess.run([sys.executable, tool, root, "--skip-agents"],
+                             capture_output=True, text=True, timeout=20)
+        return {ln.strip() for ln in out.stdout.splitlines() if ln.strip()}
+    except Exception:
+        return set()
 
 
 def check_agents_table(root, dev_skills, agents_dir, is_consumer=False):
@@ -64,6 +91,7 @@ def check_agents_table(root, dev_skills, agents_dir, is_consumer=False):
         return [
             "mapping table (| dev-skill | subagent | …) not found in AGENTS.md / AGENTS.neyra-devkit.md / CLAUDE.md"
         ]
+    deselected = profile_deselected(root)
     listed = set()
     for ln in lines[start + 2 :]:  # skip header + |---| separator
         if not ln.startswith("|"):
@@ -96,6 +124,11 @@ def check_agents_table(root, dev_skills, agents_dir, is_consumer=False):
                     print(
                         "note: templated agent '%s' validated from its template/config"
                         % sub
+                    )
+                elif sub in deselected:
+                    print(
+                        "note: '%s' not installed — settings/product.yml declares it "
+                        "out of scope for this product" % sub
                     )
                 else:
                     errs.append(

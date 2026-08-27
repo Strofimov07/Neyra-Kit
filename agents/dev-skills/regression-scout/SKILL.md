@@ -38,7 +38,21 @@ Find the most likely regressions before they find production.
 **Success criteria**
 - Shared dependencies with regression potential are identified.
 
-### 4. Report likely regressions
+### 4. Parser, extractor, and normalizer changes
+
+- A change to a parser, extractor, regex, or normalizer is verified by **replaying
+  it over populated real data**, not over fixtures. Fixtures encode the cases the
+  author already imagined; the defects that survive review are fallback
+  interception (a broader branch quietly capturing inputs an earlier branch used
+  to own) and pathological input shapes (very long or unsegmented input turning a
+  regex quadratic) — both pass unit tests.
+- Compare before/after outputs over the same real sample and report the diff
+  counts per field, including fields you did not intend to touch.
+
+**Success criteria**
+- A replay over real populated records was run, and per-field deltas are reported.
+
+### 5. Report likely regressions
 
 - Name the top few plausible regressions and whether they were checked or remain risks.
 
@@ -49,6 +63,7 @@ Find the most likely regressions before they find production.
 
 | The excuse | Why it's wrong → what to do |
 |---|---|
+| "The parser change is covered by unit tests." | Fallback interception and pathological inputs pass fixtures and fail on real data. Replay it (step 4). |
 | "Nothing else touches this." | Shared helpers/components/stores have non-obvious callers. Grep for them. |
 | "The happy path works." | Loading/empty/error/permission-denied paths are where regressions live. Check them. |
 | "It's just a UI tweak." | UI tweaks break navigation-return, caching, and state restoration. Scan the edges. |

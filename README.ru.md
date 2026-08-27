@@ -37,7 +37,7 @@ python3 agents/neyra-dev-kit/source-policy.py --require-canonical
 
 ## Что внутри
 
-- **26 инженерных skills** (`agents/dev-skills/`) — полный цикл: сбор
+- **39 инженерных skills** (`agents/dev-skills/`) — полный цикл: сбор
   требований (spec-elicitation, EARS) → планы → test-first → систематический
   дебаг → код-ревью → контрактная безопасность → локализация → готовность к
   релизу → регрессии → инциденты → оркестрация нескольких агентов

@@ -40,3 +40,11 @@ of any end-user skill product catalog.
 | [kit-evolution](kit-evolution/SKILL.md) | Turns session friction and corrections into a validated kit change |
 | [goal-mode](goal-mode/SKILL.md) | Opt-in autonomous goal orchestration: checkpointed, capped, human-gated |
 | [backlog-fleet](backlog-fleet/SKILL.md) | Existing backlog to approved parallel batches running in isolated lanes |
+| [grounding-gate](grounding-gate/SKILL.md) | Every emitted claim bound to a retrieved source with an effective date; refusal over guessing |
+| [retrieval-review](retrieval-review/SKILL.md) | Two verdicts (findability + relevance), coupled parameters, live clause counts |
+| [eval-baseline](eval-baseline/SKILL.md) | Declared baseline per measurement; a changed instrument cuts the series |
+| [llm-cost-guard](llm-cost-guard/SKILL.md) | Vendor-derived cost formula, invoice reconciliation, request ceiling, cost regression gate |
+| [data-inventory](data-inventory/SKILL.md) | Code-derived inventory: subjects, stores, basis, retention, deletion, recipients |
+| [long-job-discipline](long-job-discipline/SKILL.md) | Long work that survives deploys: own process, atomic claim, heartbeat, cursor, idempotency |
+| [launch-compliance](launch-compliance/SKILL.md) | Non-code requirements between a working product and a sellable one, with evidence |
+| [launch-ops-baseline](launch-ops-baseline/SKILL.md) | Ops floor before paying users: off-host probe, expiries, one-line alerts, rehearsed restore |
