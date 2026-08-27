@@ -82,6 +82,13 @@ untouched; `doctor: OK`; linters clean. Note for the future — an installer lin
 "only if absent" cannot tell a fresh repo from a deliberate deletion, so it may seed a file
 but must never be the thing that keeps it alive.
 
+**Follow-up in the same change.** The routine template still passed `origin/main` to
+`check_code_node.py` — the exact defect the script itself fixed in v0.31.0, one layer up: in a
+repo that integrates on `dev`, the weekly sweep measured the wrong range. The template now
+passes no ref and lets `default_base()` resolve it (`KNOWLEDGE_DIFF_BASE` → `origin/HEAD` →
+common names), which is also the only place a repo whose default branch is *not* its
+integration branch can be steered correctly.
+
 **Addendum (v0.44.0).** This landed after v0.42.0 had already shipped a weaker fix for
 the same signal: `ENABLE_DOC_FRESHNESS_WORKFLOW`, a per-consumer toggle over the very
 artifact being removed here. Two answers to one question were written in parallel, and
