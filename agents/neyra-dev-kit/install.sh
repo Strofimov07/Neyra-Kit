@@ -510,6 +510,26 @@ for tmpl_id in "${TEMPLATED_AGENTS[@]}"; do
   flag="$(enable_flag "$tmpl_id")"
   flag_val="${!flag:-1}"  # default enabled if not set in config
   tmpl_file="$KIT_DIR/templates/agents/$tmpl_id.md.tmpl"
+  # v0.43.0: the profile governs these too — a repo that declares no typed contract or
+  # no locales should not carry the agent that reviews them. Config and profile are
+  # different questions: ENABLE_* is "does this repo want the integration at all",
+  # the profile is "is this property true of the product". Either one off means off.
+  if nk_agent_skipped "$tmpl_id"; then
+    inst="$TARGET/.claude/agents/$tmpl_id.md"
+    if [[ -f "$inst" && -f "$tmpl_file" ]]; then
+      rendered_tmp="$(mktemp)"
+      render "$tmpl_file" > "$rendered_tmp" 2>/dev/null || true
+      if cmp -s "$rendered_tmp" "$inst"; then
+        do_ "rm -f '$inst'"; say "$tmpl_id — not applicable per settings/product.yml (removed unmodified copy)"
+      else
+        say "$tmpl_id — not applicable per settings/product.yml, but the copy was edited: left in place"
+      fi
+      rm -f "$rendered_tmp"
+    else
+      say "$tmpl_id — not applicable per settings/product.yml"
+    fi
+    continue
+  fi
   if [[ "$tmpl_id" == "linear-router" ]]; then
     if [[ "$ENABLE_LINEAR_ROUTER" == "1" && -n "$LINEAR_MCP_PREFIX" ]]; then
       render "$tmpl_file" | write "$TARGET/.claude/agents/linear-router.md"; say "linear-router (Linear MCP: $LINEAR_MCP_PREFIX)"
