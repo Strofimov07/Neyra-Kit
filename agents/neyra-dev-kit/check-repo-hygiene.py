@@ -59,14 +59,20 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("repo", nargs="?", default=".")
     ap.add_argument("--strict", action="store_true")
+    ap.add_argument("--exclude", action="append", default=[],
+                    help="path prefix to skip (repeatable), e.g. a deliberate host map")
     a = ap.parse_args()
     root = os.path.abspath(a.repo)
+    excluded = tuple(e.strip("/") for e in a.exclude if e.strip("/"))
+
+    def skip(rel):
+        return any(rel == e or rel.startswith(e + "/") for e in excluded)
 
     r = git(root, "ls-files", "-z")
     if r.returncode != 0:
         print("check-repo-hygiene: not a git repository — skipping")
         return 0
-    tracked = [f for f in r.stdout.split("\0") if f]
+    tracked = [f for f in r.stdout.split("\0") if f and not skip(f)]
     findings = 0
 
     # 1. host addresses in tracked docs

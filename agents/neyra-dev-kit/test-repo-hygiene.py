@@ -75,6 +75,15 @@ class RepoHygiene(unittest.TestCase):
         self.assertIn("missing.md", out)
         self.assertNotIn("→ ./b.md", out)
 
+    def test_exclude_skips_a_deliberate_host_map(self):
+        d = _repo({"docs/HOSTS.md": "app host: %s\n" % PUBLIC,
+                   "docs/run.md": "ssh root@%s\n" % PUBLIC})
+        _, out = _run(d, "--exclude", "docs/HOSTS.md")
+        self.assertIn("docs/run.md", out, "other files are still checked")
+        self.assertNotIn("docs/HOSTS.md", out)
+        self.assertEqual(_run(d, "--strict", "--exclude", "docs")[0], 0,
+                         "excluding the whole directory clears the findings")
+
     def test_clean_repo_is_clean(self):
         d = _repo({"README.md": "nothing to see\n"})
         code, out = _run(d, "--strict")
