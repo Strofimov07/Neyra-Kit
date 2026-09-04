@@ -1,10 +1,10 @@
 # Source & attribution
 
-- **Upstream:** [emilkowalski/skill](https://github.com/emilkowalski/skill) — `skills/emil-design-eng/SKILL.md`
+- **Upstream:** [emilkowalski/skill](https://github.com/emilkowalski/skill) — `skills/apple-design/SKILL.md`
 - **Commit vendored:** `d23d7f8` (2026-08-21; previously `1274a05`)
 - **License:** MIT © 2026 Emil Kowalski (see `LICENSE`)
 - **Local edits:** added a `when_to_use` frontmatter field to satisfy the kit skill contract (explicit trigger + surface scope). Body is verbatim from upstream.
 
 Part of the kit's bundled design skills (`agents/design-skills/`) so it auto-syncs to `.claude/skills/`
-via `hooks/session-start.sh`. Applies to **web/CSS surfaces**, not SwiftUI code.
+via `hooks/session-start.sh`. Apple motion/material principles **translated for the web** — web/CSS surfaces only; native Apple UI stays with `swiftui-design-principles` + `apple-hig`.
 To update: re-copy from a newer upstream commit, re-apply the `when_to_use` field where noted, bump the SHA.
