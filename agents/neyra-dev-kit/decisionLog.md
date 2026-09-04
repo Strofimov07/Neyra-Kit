@@ -822,3 +822,34 @@ reports the skip. Documented in `config.example.yml`.
 **Consequence.** A UI-less consumer opts out of ~2.7M / 149 files with one config line;
 default installs are unchanged. Verified: dev install with the toggle 0 → no
 `agents/design-skills` and a "disabled" note; default → 16 skills synced; `doctor: OK`.
+
+## 2026-09-05 — Vendored upstream moves; the pin has to follow it (v0.46.0)
+
+**Context.** The three Emil Kowalski skills bundled in `agents/design-skills/` were pinned
+to `emilkowalski/skill@1274a05` since they were vendored. A routine check found the upstream
+at `d23d7f8` (2026-08-21): the two skills we carry had drifted (Radix UI references replaced
+by Base UI's `--transform-origin`, reviewer persona reworded), the upstream LICENSE holder
+had changed from the template author to Emil Kowalski, and nine skills existed upstream that
+the kit never saw. Nothing in the kit watches a vendored pin; a `SOURCE.md` records the SHA
+and then goes stale silently.
+
+**Decision.** Refresh the three to `d23d7f8` (bodies verbatim, the kit's `when_to_use` field
+re-applied, LICENSE re-copied from the pinned commit) and vendor five more under the same
+discipline: `apple-design`, `find-animation-opportunities`, `improve-animations` — all
+web/CSS, gated like their siblings — `pick-ui-library`, and `write-swift`, the first
+iOS-side bundled skill.
+`write-swift` is admitted because it is language craft, not UI: it emits no views, is gated
+to `ios/**`, and defers screen design to `swiftui-design-principles`; the layer README states
+the exception so the "web only" scope rule does not read as violated. `pick-ui-library`
+ships upstream as explicit-invoke only; the kit removes that flag on purpose, because a
+curated pick is worth nothing if the agent has already run `npm install` on its own choice —
+the decision point is the trigger, so the skill fires on it. Not vendored: `animate`,
+`animate-expo`, `ask-sonner`, `prototype` — each is a judgment call for a consumer, not a
+default. Every
+`SOURCE.md` now records the previous SHA alongside the current one, so the next refresh can
+diff against what was actually vendored.
+
+**Consequence.** Eight Emil Kowalski skills at one pin, 21 bundled skills total, lint and
+egress guard green. The general lesson is recorded as a signal: a vendored pin is a fact with
+a freshness date, and `doc-freshness` is the natural owner of a "compare `SOURCE.md` SHA to
+upstream HEAD" check — reporting only, like its wiki host check.

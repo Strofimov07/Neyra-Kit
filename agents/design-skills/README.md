@@ -22,7 +22,9 @@ copy is generated and gitignored — **edit here, never there.**
 
 These emit **CSS/React/HTML**, not SwiftUI. They are `when_to_use`-gated to web
 surfaces (`aso/frontend-web`, `backend/ops-console`, `screenshots/generator`,
-marketing/landing pages). They do not fire on the iOS app. Complements
+marketing/landing pages). They do not fire on the iOS app — with one deliberate
+exception, `write-swift`, which is Swift *language* craft gated to `ios/**` and emits
+no UI (screen design stays with `swiftui-design-principles`). Complements
 `design-system-conformance` (reuse the shipped design system) — taste skills lead
 on greenfield web, conformance leads inside an existing system.
 
@@ -35,6 +37,11 @@ on greenfield web, conformance leads inside an existing system.
 - `emil-design-eng` — Emil Kowalski's UI-polish & component-craft philosophy
 - `review-animations` — motion-code review pass (explicit-invoke; `disable-model-invocation`)
 - `animation-vocabulary` — reverse-lookup glossary for naming motion effects
+- `apple-design` — Apple's fluid/physical motion and material principles, translated for the web
+- `find-animation-opportunities` — read-only survey: what should animate (and what must not)
+- `improve-animations` — read-only motion audit + hand-off implementation plans for a codebase
+- `write-swift` — modern Swift language craft (Swift 6 concurrency, generics, ARC, Swift Testing); iOS-side, `ios/**`
+- `pick-ui-library` — curated npm pick per frontend task (toasts, primitives, charts, dnd, state…); auto-fires on a library decision
 
 **Style variants (pick by brief):** `minimalist-ui`, `industrial-brutalist-ui`, `brandkit`
 
@@ -53,10 +60,12 @@ disabled via repo-root `.impeccable/config.json`. Unlike the others it ships exe
 All third-party MIT. Each skill dir carries `LICENSE` + `SOURCE.md` (upstream repo,
 pinned commit, local edits). Sources:
 - [`Leonxlnx/taste-skill@b177427`](https://github.com/Leonxlnx/taste-skill) (MIT)
-- [`emilkowalski/skill@1274a05`](https://github.com/emilkowalski/skill) (MIT)
+- [`emilkowalski/skill@d23d7f8`](https://github.com/emilkowalski/skill) (MIT) — 8 skills
 
 Only local edit vs upstream: a `when_to_use` frontmatter field added where the
-upstream description lacked an explicit trigger (kit `SKILL_CONTRACT` requires one).
+upstream description lacked an explicit trigger (kit `SKILL_CONTRACT` requires one) —
+except `pick-ui-library`, where the upstream `disable-model-invocation` is also removed so
+the skill fires on its own when a frontend library is being chosen (see its `SOURCE.md`).
 Update = re-copy from a newer upstream commit + bump the SHA in `SOURCE.md`.
 
 **Impeccable posture:** bundled **skill-only, hook OFF** (see `IMPECCABLE.md`). The auto-hook
