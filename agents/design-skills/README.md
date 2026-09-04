@@ -41,6 +41,7 @@ on greenfield web, conformance leads inside an existing system.
 - `find-animation-opportunities` — read-only survey: what should animate (and what must not)
 - `improve-animations` — read-only motion audit + hand-off implementation plans for a codebase
 - `write-swift` — modern Swift language craft (Swift 6 concurrency, generics, ARC, Swift Testing); iOS-side, `ios/**`
+- `pick-ui-library` — curated npm pick per frontend task (toasts, primitives, charts, dnd, state…); auto-fires on a library decision
 
 **Style variants (pick by brief):** `minimalist-ui`, `industrial-brutalist-ui`, `brandkit`
 
@@ -59,10 +60,12 @@ disabled via repo-root `.impeccable/config.json`. Unlike the others it ships exe
 All third-party MIT. Each skill dir carries `LICENSE` + `SOURCE.md` (upstream repo,
 pinned commit, local edits). Sources:
 - [`Leonxlnx/taste-skill@b177427`](https://github.com/Leonxlnx/taste-skill) (MIT)
-- [`emilkowalski/skill@d23d7f8`](https://github.com/emilkowalski/skill) (MIT) — 7 skills
+- [`emilkowalski/skill@d23d7f8`](https://github.com/emilkowalski/skill) (MIT) — 8 skills
 
 Only local edit vs upstream: a `when_to_use` frontmatter field added where the
-upstream description lacked an explicit trigger (kit `SKILL_CONTRACT` requires one).
+upstream description lacked an explicit trigger (kit `SKILL_CONTRACT` requires one) —
+except `pick-ui-library`, where the upstream `disable-model-invocation` is also removed so
+the skill fires on its own when a frontend library is being chosen (see its `SOURCE.md`).
 Update = re-copy from a newer upstream commit + bump the SHA in `SOURCE.md`.
 
 **Impeccable posture:** bundled **skill-only, hook OFF** (see `IMPECCABLE.md`). The auto-hook
