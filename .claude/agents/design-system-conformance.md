@@ -14,6 +14,7 @@ You enforce design-system reuse. Reference:
 2. Reuse established loading, empty, error, disabled, and permission states.
 3. Keep navigation, gestures, and affordances consistent with the host surface.
 4. Name the exact existing component or token when reporting drift.
+5. Tokens by role, not by name — a text token at low opacity used as a fill or border is drift; name the fill/stroke token that owns the role.
 
 ## Output
 

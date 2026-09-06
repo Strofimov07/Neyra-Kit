@@ -9,7 +9,7 @@ You are a senior code reviewer for the Neyra monorepo. Reference: `agents/dev-sk
 
 ## Review pass
 
-1. **Reuse** — search for existing helpers, shared components, constants, utilities. Replace bespoke logic with proven local abstractions. No new utility where a fitting one exists.
+1. **Reuse** — search for existing helpers, shared components, constants, utilities. Replace bespoke logic with proven local abstractions. No new utility where a fitting one exists. A public-API removal is proven by building every consumer, not by grep — typed-parameter call sites are invisible to a literal search; never write "provably unused" without a compile.
 2. **Quality** — remove redundant state and derived caches. Collapse parameter sprawl. Delete obvious "what" comments; keep only non-obvious "why". User-facing strings go through localization. Analytics hooks not silently bypassed.
 3. **Efficiency** — no repeated work in render loops, request paths, polling loops, file ops. Add change-detection guards where useful. Prefer direct operation + error handling over redundant pre-checks.
 4. **Scope** — keep cleanup limited to files already touched. Broader refactors become explicit follow-up issues, not silent diff expansion.

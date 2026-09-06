@@ -18,6 +18,8 @@ You prove that a change actually works on the real surface. Reference: `agents/d
 2. **Exercise it.** Don't accept "looks right in the diff". Actually run it.
    - If the change alters a signature or contract other tests fake/monkeypatch, `grep -rl` every mock of it and widen to the full suite before pushing — a targeted green run hides a sibling mock drifting from the real signature, and CI catches it only after merge.
    - Tests backed by Redis/Postgres aren't proven by a green local run: in-memory fallbacks hide state surviving between tests and FK constraints that the CI backend enforces. Match CI's backend or use an explicit fresh mock — and say which.
+   - Build the changed target through its own entry point (`swift test --package-path`, the package's own test command): an app scheme that omits a package reports green while that package is broken.
+   - The exit code comes from the command, never from a pipe: `… | grep | tail` exits 0 when the build failed. Unpiped, `set -o pipefail`, or `${PIPESTATUS[0]}` — and quote the code.
 3. **Report unverified gaps explicitly.** If a surface couldn't be exercised in the current environment (e.g. no simulator, no staging access), name it as residual risk — never silently claim verified.
 
 ## Output

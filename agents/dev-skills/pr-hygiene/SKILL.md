@@ -22,18 +22,21 @@ Land changes as small, reviewable, correctly-attributed commits/PRs without swee
 - **One change = one branch = one PR**, named `feat/…` / `fix/…` / `chore/…`.
 - **Clean up after merge:** delete the remote branch (or rely on GitHub auto-delete) and the local branch (`git branch -d`), then `git fetch --prune`. Don't let merged branches accumulate.
 - **Never strand WIP across a branch switch:** know your base; commit or stash before `git checkout`; after switching, confirm `git branch --show-current` and the base. (This is the time-sink when a tree gets reset under you.)
+- **Stacked PRs:** when PR B is based on PR A's branch, retarget B to the integration target *before* merging A, or merge A without `--delete-branch` and clean the branch afterwards. GitHub closes a PR whose base branch is deleted, and a closed PR cannot be retargeted — the work has to be reopened as a new PR after a rebase.
+- **Rebase after a squash-merge with `--onto`:** a squash leaves no patch-ids for the sibling's commits, so a plain `git rebase <target>` replays already-landed commits as conflicts. Use `git rebase --onto <target> <last-landed-commit>`.
 
 ## Steps
 
 1. **Branch first** — never commit straight to the merge target (`dev` if it exists, else `main`); branch off it. **In the same breath, flip the anchored tracker issue to In Progress** — a branch named for NEB-XXXX whose issue still says Backlog lies to the team, and skipping the started state destroys cycle-time-by-stage data that delivery-audit and team-health-check compute from `startedAt`. Same-sitting work is not an exception: flip on start, Done only after the gate.
 2. **Scope the stage** — `git add` explicit paths for THIS change. Never `git add -A` when the tree has unrelated or pre-existing changes. Review `git diff --cached --stat` before committing.
-3. **Commit message** — imperative subject + a body that explains what and why. No `Co-Authored-By: Claude`, no "Generated with Claude Code" or any AI attribution — write as the author.
+3. **Commit message** — imperative subject + a body that explains what and why. No `Co-Authored-By: Claude`, no "Generated with Claude Code" or any AI attribution — write as the author. Anything a pipeline must *read* (a skip/pending marker, a ticket key) lives in the commit message, not only in the PR body: a re-run of a failed job reuses the original event payload, so a later body edit never reaches it.
 4. **PR body** — follow the repo's PR Delivery Format (summary, changes, verification, risks); no AI attribution footer.
 5. **Title honesty (NEB-1407)** — before opening the PR, compare the title's claimed scope against `git diff --stat` top-level paths. The title must not claim a surface the diff doesn't touch (a "monetization + iOS build repair" title over a diff with zero `ios/` files misleads changelogs, release notes, and delivery-audit). Mismatch → fix the title, not the expectation.
 6. **Don't mix concerns** — split unrelated changes into separate commits/PRs.
 7. **Clean baseline before starting** — for a new branch/worktree, verify the test baseline is green *before* layering work, so a later failure is attributable to your change, not inherited.
 8. **Destructive ops need explicit confirmation** — `git reset --hard`, `git clean -fd`, `branch -D`, `worktree remove`, or discarding a branch require an explicit, typed user confirmation naming what will be lost. Never discard work to "clean up".
 9. **npm lock hygiene (on a dependency change)** — do NOT regenerate `package-lock.json` from scratch on your machine: a dev-OS regen drops the Linux native-binding entries CI installs from and can silently minor-bump an engine with a native binding (a `^`-ranged test-runner/bundler). Base off the CI-green lock (`dev`/`main`) and add deps with `npm install --package-lock-only` (platform-independent; keeps other platforms' `packages` entries). Pin native-binding engines to the CI-green version, not `^`. Before push: `grep -c '"node_modules/@rollup/rollup-linux-x64-gnu"' package-lock.json` ≥ 1. (CI's npm version is a consumer fact — see `settings/`.)
+10. **Ticket references are real** — a `NEB-XXXX` goes into code, a commit, or a doc only after the issue exists and `get_issue` returns its title. Numbers are auto-incremented; a reserved or guessed one lands on somebody else's closed issue and every audit and delivery report inherits the lie. Create first, cite second.
 
 ## Success criteria
 
@@ -41,6 +44,7 @@ Land changes as small, reviewable, correctly-attributed commits/PRs without swee
 - work is on a feature branch off the right target (`dev` if it exists, else `main`), not the target itself
 - message + PR body carry no AI attribution and match the repo format
 - after merge, the branch is deleted and `git fetch --prune` run (no stale branches)
+- every ticket reference in the diff resolves to an existing issue
 
 ## Common rationalizations (and why they're invalid)
 
@@ -52,6 +56,9 @@ Land changes as small, reviewable, correctly-attributed commits/PRs without swee
 | "The PR title is close enough to what changed." | NEB-1407: a title claiming a surface the diff doesn't touch (e.g. an "iOS build repair" title over zero `ios/` files) misleads changelogs, release notes, and delivery-audit. Compare the title against `git diff --stat` and fix the title, not the expectation (step 5). |
 | "The checkout probably worked — I'll keep going." | A checkout blocked by another worktree exits non-zero; ignore the code and the next command lands commits on the branch you were already on (three did). After switching, confirm `git branch --show-current` and the base (Branch & merge policy). |
 | "I regenerated the lock and local `npm ci` is green." | A lock regenerated on macOS omits the Linux binding entries CI installs from → red CI, green local. Don't regen from scratch: base off the CI-green lock and `npm install --package-lock-only` (step 9); grep the `@rollup/rollup-linux-x64-gnu` entry before push. |
+| "I'll merge the lower PR of the stack first and retarget the upper one after." | Merging with `--delete-branch` deletes the upper PR's base, GitHub closes it, and a closed PR cannot be retargeted. Retarget first, or merge without deleting the branch (Branch & merge policy). |
+| "Sibling squash-merged — a plain rebase onto the target will do." | Squash leaves no patch-ids; the rebase replays every landed commit as a conflict. `git rebase --onto <target> <last-landed-commit>`. |
+| "I'll reference the next ticket number now and create the issue later." | Numbers are auto-incremented; the one you guessed belongs to a closed issue by the time the code lands. Create the issue, read its title back, then cite it (step 10). |
 
 ## Non-goals
 

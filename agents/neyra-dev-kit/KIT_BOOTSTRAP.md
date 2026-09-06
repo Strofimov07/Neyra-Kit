@@ -102,3 +102,5 @@ merges or acts outward without **checkpoint 2**, tasks run in isolated lanes
 ## Linear hygiene
 
 Every Linear issue MUST have a project, routed by stream. No project = not ready.
+A `NEB-XXXX` is cited in code, commits, or docs only after the issue exists and
+`get_issue` returns its title — create first, cite second; never reserve a number.

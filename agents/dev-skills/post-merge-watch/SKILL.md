@@ -36,10 +36,16 @@ watching, and it shouldn't have to be a human's memory.
   equivalent) until terminal state or the window expires (default: 10 min for
   build/test, longer only if a deploy stage is known-slow — state the window).
 - Read-only. Never retrigger, cancel, or approve anything.
+- If the window expires first, the report **ends** with
+  `INCOMPLETE: run <id> still in_progress — finish with: gh run watch <id>`. A
+  subagent that has returned has no background process. "Monitoring continues in the
+  background and will report the final result" is a forbidden sentence: it reads as
+  covered, and the orchestrator closes a watch whose deploy never finished.
 
 **Success criteria**
-- Every watched run reaches a reported terminal state or an explicit
-  "window expired, still running: <link>".
+- Every watched run reaches a reported terminal state or the report ends with an
+  explicit `INCOMPLETE: <run id> still in_progress` plus the command that finishes
+  the watch.
 
 ### 3. Surface the result in the same turn
 
@@ -79,6 +85,7 @@ boundary. This skill is the active half; the hook is the net.
 | "No CI is wired here — nothing to watch." | "No CI wired" is valid only *after* reading the config (step 1); assuming it silently removes the whole control. Name the watched pipeline set, or state "no CI wired" as a checked outcome. |
 | "The pipeline's already red — that's pre-existing, not mine." | Newly-red after your merge is yours by default; known-broken must be *confirmed* against `settings/facts/`, not assumed. If it's new, it's your regression — hand off to `systematic-debugging` / `incident-runbook` (step 4), don't just mention it. |
 | "The Stop-gate hook will catch a red CI anyway." | The hook is the net, not the watch — it fires once at session end on the default branch only. Relying on it lets a failure sit unsurfaced mid-session and misses non-default branches. Do the active watch; the hook is insurance. |
+| "The window expired, but monitoring continues in the background." | It does not — a returned subagent runs nothing. The orchestrator reads that sentence as "covered" and closes a watch with the deploy still in progress. End the report with `INCOMPLETE: <run id> still in_progress` and the `gh run watch <id>` that finishes it. |
 
 ## Rules
 
@@ -86,6 +93,8 @@ boundary. This skill is the active half; the hook is the net.
 - Bounded window, always stated — "I'll keep an eye on it" without a window
   is not a watch.
 - Newly-red after your merge = yours by default; known-broken = say so once.
+- A watch that saw no terminal state ends its report with `INCOMPLETE` and the command
+  to finish it; it never claims to continue after returning.
 
 ## Non-goals
 

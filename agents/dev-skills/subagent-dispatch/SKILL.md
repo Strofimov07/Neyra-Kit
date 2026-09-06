@@ -51,6 +51,11 @@ even after conversation compaction — without losing track of what each task di
 - `NEEDS_CONTEXT` → re-dispatch with the missing information.
 - `BLOCKED` → triage: missing context / flawed reasoning / scope too big / plan
   error → re-dispatch, escalate the model, break the task down, or escalate to a human.
+- `FAILED` / no report (limit, crash) → inspect before any re-dispatch: `git status
+  --short` in the task's worktree and `git log <base>..<branch>`. The agent usually wrote
+  everything and died before committing — salvage, verify, commit, then decide what is
+  actually left (see `parallel-lanes` §4). A re-dispatch that starts from a clean tree
+  throws that work away.
 
 **Success criteria**
 - No task silently stalls; every block has a named cause and a next action.
@@ -63,6 +68,7 @@ even after conversation compaction — without losing track of what each task di
 | "The diff is just `HEAD~1`, I'll compute the range from that." | Interleaved commits from other tasks make `HEAD~1` the wrong base and mis-attribute the diff. Record the exact BASE before dispatching and compute the range from it (step 2). |
 | "These two small tasks are related — I'll bundle them into one dispatch." | "One task per dispatch; do not bundle" — bundling makes the ledger's range and status ambiguous. Dispatch one task with fresh context (step 3). |
 | "The subagent came back BLOCKED — I'll just retry it." | A blind retry repeats the block. Triage to a named cause — missing context / flawed reasoning / scope too big / plan error — each with a different next action (step 4). |
+| "No report came back — the task didn't happen, re-dispatch it." | It happened up to the point the agent died, and the files are usually in its worktree. Inspect `git status` and the branch first; salvage before you redo (step 4). |
 | "Each subagent reviewed its own work, so the gate's done." | A self-review isn't the gate. Each task's result still goes through `spec-review` + `code-reviewer` + `verify-runtime` (Rules) — a stale sibling test-fake slipped past because only the targeted files were run. |
 
 ## Rules

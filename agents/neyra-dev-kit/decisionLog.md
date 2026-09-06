@@ -886,3 +886,43 @@ Bundled as one patch release because the four are independent one-file fixes wit
 shared behaviour, the same shape as v0.31.0 and v0.36.0. Verified: new regressions
 (`test-lint-plans`, `test-format-hook`, `test-install-render`) green, existing hook and
 reconcile regressions green, doctor OK, install+doctor green on all four bundle profiles.
+
+## 2026-09-07 — Promote fourteen consumer signals into the skills that should have caught them (v0.47.0)
+
+**Context.** Five kit tickets held signals that had been captured, deduplicated and
+routed weeks ago but never landed in a skill: NEB-1889 (eight signals from landing 72
+Codex branches and integrating three Lawyer lanes in AI Browser), NEB-2238 (post-merge-watch
+claiming a background watch it did not have; pr-review-watch conflating "reviewer skipped"
+with "no review"), NEB-1843 (a grep-based "provably unused" verdict; a mechanical token
+migration correct by name and wrong by role), NEB-2279 §3–§4 (two rules for gate authors
+from a live ratchet and a live a11y guard), NEB-1835 §2 (ticket numbers guessed before the
+tickets existed). Each was verified still absent from canon by grep before this change:
+`verify-runtime` had no exit-code rule, `parallel-lanes` no derived-file rule,
+`post-merge-watch` no `INCOMPLETE` status, `simplify-diff` no build-proof rule. The stacked-PR
+lesson logged on 2026-08-28 had the same fate and lands here too.
+
+**Decision.** One "promote signals" release in the shape of v0.31.0 / v0.34.7: each signal
+becomes a checkable step, a rationalization row that names the excuse, and a mirror line in
+the portable wrapper, so the rule reaches the agent that fires — not only the skill body.
+Homes: `verify-runtime` (build the changed target through its own entry point; the exit code
+comes from the command, never a pipe), `parallel-lanes` §4 (inspect a dead lane before
+restart; regenerate derived files; re-parent a colliding migration), `subagent-dispatch`
+step 4 (`FAILED` / no report → salvage first), `pr-hygiene` (stacked PRs; `rebase --onto`
+after a squash; pipeline markers in the commit message; step 10 — cite a ticket only after
+it exists, echoed in `KIT_BOOTSTRAP`), `simplify-diff` (a public-API removal is proven by a
+build), `post-merge-watch` (`INCOMPLETE` + the finishing command; "monitoring continues" is
+a forbidden sentence), `pr-review-watch` (cite a gate that ran on the final diff instead of
+demanding a repeat), `batch-migration` (a role pass after any mechanical mapping) with
+`design-system-conformance` (tokens by role, not name), and a new `test-first` section
+"Static guards and ratchets" (a metric a spelling change can lower is not a metric; an
+allowlist ratchet must shrink; a source guard parses structure, never a window) mirrored in
+`EVOLVING-THE-KIT` §5 for the kit's own gates. NEB-2279 §5 (the premise-measurement rule
+worked four times in seven) is a confirmation and changes nothing.
+
+**Consequence.** Fourteen signals now have a rule that would have prevented them, each
+pressure-tested against the recorded failure. Minor bump: new observable behaviour in nine
+skills. Not landed here: NEB-2279 §1 (catalog ↔ agents drift) and §2 (backlog-fleet
+autonomous mode), NEB-1669 (tracker-down degraded mode), NEB-1835 §1 (bundle checksum) —
+each is structural, not prose, and gets its own change. Verified: `lint-skills` clean,
+`lint-scope` no new project facts, `check-skill-mapping` and `check-cross-refs` green,
+doctor OK.

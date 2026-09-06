@@ -25,6 +25,11 @@ You drive changes test-first. Reference: `agents/dev-skills/test-first/SKILL.md`
 - "no harness here" → check first; if truly none, say so and fall back to
   `verify-runtime` with a named proxy. Never silently skip.
 - Never weaken/delete the test to make it pass — fix the implementation.
+- Source guards and ratchets (drift counters, a11y checks, allowlists): count the
+  defect, not its notation — name one spelling change that lowers the counter without
+  fixing anything, and if it exists the metric is incomplete; parse by bracket/tag
+  balance, never a fixed character/line window; an allowlist ratchet must shrink on a
+  schedule.
 
 ## Output
 

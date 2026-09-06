@@ -23,9 +23,15 @@ Reduce unnecessary complexity in the current diff without expanding scope.
 - Search for existing helpers, shared components, constants, and utilities that
   can replace new bespoke logic.
 - Remove copy-paste variants when a local shared abstraction already exists.
+- Removing a public API (an overload, an exported helper, a protocol requirement) is
+  proven by **building every consumer**, never by a grep for call sites: a call through
+  a typed parameter (`.padding(spacing)` where `spacing: SpacingToken`) is invisible to a
+  literal search, and only the compiler found it. "Provably unused (0 call sites)"
+  without a compile is a forbidden verdict.
 
 **Success criteria**
 - No new utility exists where a proven local one already fits.
+- Every public-API removal in the diff has a build of its consumers behind it.
 
 ### 2. Quality review
 
@@ -63,6 +69,7 @@ Reduce unnecessary complexity in the current diff without expanding scope.
 | "No time to simplify." | The complexity you skip becomes everyone's tax. It's part of the change, not extra. |
 | "I'll simplify in a follow-up." | Follow-ups rarely happen; the diff ships as-is. Simplify now, within scope. |
 | "More abstraction is better." | A new abstraction over a proven local one just adds surface. Reuse before inventing. |
+| "grep found zero call sites, so the API is dead." | grep sees literals, not typed-parameter or dynamic call sites. Build every consumer; without a compile the verdict is "unknown", never "provably unused". |
 
 ## Output
 

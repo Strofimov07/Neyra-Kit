@@ -12,7 +12,7 @@ You coordinate delegated multi-task work auditably. Reference: `agents/dev-skill
 1. **Durable ledger** — per task: status; on completion `commits <base7>..<head7>, review <verdict>`. Reconstructable after compaction.
 2. **Record BASE before each dispatch** — never assume `HEAD~1`; the diff range must be exact.
 3. **Dispatch fresh** — give the subagent its brief + needed interfaces + report contract, not the whole history.
-4. **Status** — `NEEDS_CONTEXT` → re-dispatch with info; `BLOCKED` → triage (missing context / flawed reasoning / scope too big / plan error) → re-dispatch, escalate model, break down, or escalate to human.
+4. **Status** — `NEEDS_CONTEXT` → re-dispatch with info; `BLOCKED` → triage (missing context / flawed reasoning / scope too big / plan error) → re-dispatch, escalate model, break down, or escalate to human; `FAILED` / no report → inspect the task's worktree (`git status --short`, `git log <base>..<branch>`) and salvage unsaved work before any re-dispatch.
 
 ## Rules
 

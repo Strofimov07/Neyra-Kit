@@ -46,6 +46,13 @@ Turn a sweeping change into independently verifiable work units without losing c
 ### 4. Reconcile outputs consistently
 
 - Ensure each unit follows the same conventions, contracts, and naming.
+- After a mechanical rename or mapping pass, run a **role pass**: a token replaced by
+  name may serve a different role at some sites. A text-colour token at 4–8 % opacity
+  used as a fill or a stroke maps to the fill/stroke tokens, not to the text token — the
+  sed is right for text and yields invisible borders in the light theme. Grep the
+  pattern `<textToken>.opacity(<small>)` in background/border positions and remap each
+  site by role before the batch goes to review; the second reviewer is not the place to
+  discover it.
 - Track completion, failures, and follow-up work per unit.
 
 **Success criteria**
@@ -59,3 +66,4 @@ Turn a sweeping change into independently verifiable work units without losing c
 | "I'll figure out how to verify each unit as I go." | Define the verification recipe up front; if no concrete path exists, stop and ask instead of guessing (step 2). No path means don't start the unit. |
 | "These slices are close enough — unit B can just build on A." | Sibling coupling breaks independent review and any parallelism. Avoid units that depend on another landing first; split by stable boundaries — module, directory, feature slice, contract family (step 1). |
 | "Each patch works on its own — minor style differences are fine." | The batch must read like one coherent migration, not unrelated patches. Reconcile to the same conventions, contracts, and naming across every unit (step 4). |
+| "The mapping table was applied everywhere — the migration is done." | Applied by name, not by role. A text token at low opacity used as a fill is now an invisible border. Run the role pass (step 4) before review. |
