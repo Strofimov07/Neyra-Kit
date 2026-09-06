@@ -54,6 +54,11 @@ read this first.
   placeholder in the canonical repo and checks the rendered value in a consumer.
 - Append a `decisionLog.md` entry (`## DATE — <decision>` + **Context** /
   **Decision** / **Consequence**) — the *why*; Linear holds the *what/when*.
+- Regenerate the shipped-file manifest **last**, after the VERSION bump and every edit to
+  a hook, tool, or knowledge file: `python3 agents/neyra-dev-kit/kit-manifest.py --write`.
+  `KIT_MANIFEST.sha256` records the sha256 of every file `install.sh` ships verbatim;
+  doctor fails on a stale copy here and a consumer's doctor recomputes the hashes there
+  (NEB-1835 — a consumer ran a pre-0.36 tool on kit 0.38.0 for weeks, unnoticed).
 
 ## 5. Validate before install
 
@@ -113,6 +118,7 @@ after its branch passes the canonical checks and a reviewable PR is open here:
 
 ```bash
 python3 agents/neyra-dev-kit/source-policy.py --require-canonical
+python3 agents/neyra-dev-kit/kit-manifest.py --write   # after the VERSION bump; doctor checks it
 bash agents/neyra-dev-kit/doctor.sh
 git push -u origin <branch>
 # open a PR against Neyra-Kit/main; merge remains a human decision

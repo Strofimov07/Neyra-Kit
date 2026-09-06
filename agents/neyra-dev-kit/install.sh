@@ -121,9 +121,11 @@ write() { # write <dest> <<<content (stdin)
 }
 
 # The explicit set of kit tooling files copied into a consumer's agents/neyra-dev-kit/.
-# Single source of truth: used BOTH by the copy loop and the retirement manifest, so the
-# two can never drift — a mismatch could delete a real kit file. Add new tooling here.
-NK_TOOL_FILES="KIT_BOOTSTRAP.md doctor.sh source-policy.py lint-skills.py check-skill-mapping.py test-check-skill-mapping.py test-portable-reviewers.py check-egress.py lint-scope.py test-lint-scope.py test-gate-resolution.py check-cross-refs.py test-cross-refs.py check-external-leaks.py test-external-leaks.py lint-plans.py validate-codex-hooks.py product-profile.py check-module-size.py check-repo-hygiene.py VERSION"
+# Single source of truth: used by the copy loop, the retirement manifest AND
+# kit-manifest.py (which parses this line), so the three can never drift — a mismatch
+# could delete a real kit file or leave one unverified. Add new tooling here, then run
+# `python3 kit-manifest.py --write` (doctor fails on a stale KIT_MANIFEST.sha256).
+NK_TOOL_FILES="KIT_BOOTSTRAP.md doctor.sh source-policy.py lint-skills.py check-skill-mapping.py test-check-skill-mapping.py test-portable-reviewers.py check-egress.py lint-scope.py test-lint-scope.py test-gate-resolution.py check-cross-refs.py test-cross-refs.py check-external-leaks.py test-external-leaks.py lint-plans.py validate-codex-hooks.py product-profile.py check-module-size.py check-repo-hygiene.py kit-manifest.py KIT_MANIFEST.sha256 VERSION"
 
 # --- kit-managed file manifest + retirement (NEB-1487) --------------------------
 # sha256 of a file, portable (Linux sha256sum / macOS shasum). Empty on any failure.
@@ -666,7 +668,7 @@ if [[ "${ENABLE_HOOKS}" == "1" ]]; then
   echo "Hooks — bootstrap + enforcement (.claude/settings.json):"
   tool_dst="$TARGET/agents/neyra-dev-kit"
   if [[ $DRY -eq 1 ]]; then
-    say "[dry] copy hooks/, KIT_BOOTSTRAP.md, doctor.sh, lint-*.py, check-skill-mapping.py, VERSION → $tool_dst"
+    say "[dry] copy hooks/, KIT_BOOTSTRAP.md, doctor.sh, lint-*.py, check-*.py, kit-manifest.py + KIT_MANIFEST.sha256, VERSION → $tool_dst"
   else
     mkdir -p "$tool_dst/hooks/lib"
     if cp "$KIT_DIR"/hooks/*.sh "$tool_dst/hooks/" 2>/dev/null; then chmod +x "$tool_dst"/hooks/*.sh; fi
