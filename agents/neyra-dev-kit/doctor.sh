@@ -137,6 +137,7 @@ if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; t
   [ -f "$KIT/test-kit-manifest.py" ] && run "kit-manifest regression" python3 "$KIT/test-kit-manifest.py"
   [ -f "$KIT/test-code-node.py" ] && run "code-node regression" python3 "$KIT/test-code-node.py"
   [ -f "$KIT/test-agents-status.py" ] && run "agents-status regression" python3 "$KIT/test-agents-status.py"
+  [ -f "$KIT/test-handoff.py" ] && run "handoff regression" python3 "$KIT/test-handoff.py"
 fi
 # NEB-1835: in a consumer, every file the kit ships verbatim must equal canon at the
 # installed VERSION. A consumer ran a pre-0.36 check_code_node.py on kit 0.38.0 for weeks
@@ -171,6 +172,15 @@ if [ -f "$KIT/check-module-size.py" ]; then
   echo "── modularity drift (advisory)"
   python3 "$KIT/check-module-size.py" "$ROOT" \
     --exclude agents/design-skills --exclude .claude/skills || true
+fi
+# NEB-1669: tracker debt is a doctor line, not a memory. Advisory — the queue is local
+# state, and a red doctor over an outage would punish the repo for the tracker's fault.
+if [ -f "$KIT/tracker-queue.py" ]; then
+  tq="$(cd "$ROOT" && CLAUDE_PROJECT_DIR="$ROOT" python3 "$KIT/tracker-queue.py" status 2>/dev/null || true)"
+  if [ -n "$tq" ]; then
+    echo "── tracker queue (advisory)"
+    echo "WARN: $tq"
+  fi
 fi
 if [ -d "$ROOT/agents/dev-skills" ] || [ -d "$ROOT/.claude/agents" ]; then
   if grep -rqs "settings/facts" "$ROOT/agents/dev-skills" "$ROOT/.claude/agents" 2>/dev/null; then

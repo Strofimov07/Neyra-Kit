@@ -39,7 +39,10 @@ This operationalizes the `Self-Improvement Rule` in AGENTS.md as a triggerable l
     do **not** edit or append inside them. Persist the signal directly in the
     Neyra Skills Kit Linear project after dedup. If Linear is unavailable, append
     it to local-only `.neyra/kit-evolution-pending.log`, report the sync debt, and
-    move it to the canonical ledger when access returns.
+    move it to the canonical ledger when access returns. The session-start bootstrap
+    reports that file's size and age every session until it is empty, so the debt
+    cannot be forgotten; a tracker *mutation* that could not be applied (a closure, a
+    comment) goes to `tracker-queue.py`, never into prose (NEB-1669).
 - This applies to insights found mid-work too, not only at retro time: persist
   first, route later.
 

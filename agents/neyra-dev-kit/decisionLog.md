@@ -1032,3 +1032,40 @@ Payload grows ~750KB, dominated by `apple-hig`; that is disk, not context (the c
 grepped on demand), and `ENABLE_BUNDLED_SKILLS=0` from v0.37.0 already opts a repo out
 wholesale. Trimmed 12 `*.videos.md` files from the HIG mirror — pure URL dumps, nothing links
 to them. Landed a month after authoring, rebased over v0.40.0–v0.49.0; `write-swift` (v0.46.0) joins the native family in the README. Verified at landing: `lint-skills` clean on all 24 bundled skills, egress guard clean, doctor OK, dev install syncs 24 skills.
+
+## 2026-09-07 — A session hands off on disk, and a dead tracker leaves a queue instead of a note (v0.51.0)
+
+**Context.** NEB-1669: a consumer's tracker returned HTML instead of JSON for seven days.
+A ticket finished and integrated on day one stayed In Progress until a back-dated comment a
+week later; a fleet-audit result reached no record until an agent wrote a free-form handoff
+document by hand; and the fallback the bootstrap names — `.neyra/kit-evolution-pending.log`
+— did not exist on disk in that repo, because nothing ever created or reported it. The kit
+demanded tracker hygiene and described no behaviour for a tracker that is gone for a week
+rather than a minute. The same review of everything-claude-code (the worldflowai fork) found
+one idea worth taking: a per-session memory file with fixed sections that the next session
+reads first, stamped by a PreCompact hook — its implementation there was broken (hooks wrote
+to stderr the model never sees), the shape was right.
+
+**Decision.** Three small pieces on the kit's own host shim. `.neyra/handoff.md`: fixed
+sections (Completed / In progress with the exact next step / Blockers / Decisions and why /
+Context to load first / Pending tracker mutations), written by the agent before a session
+ends with open work, local and never committed (`install.sh` now gitignores `.neyra/`).
+`hooks/pre-compact.sh` (Claude Code PreCompact; Codex and Cursor expose no such event)
+creates the skeleton when absent and stamps a compaction marker, so what is above the
+marker was in context and what is below was written after the summary; it also records
+`compact` in kit telemetry. `tracker-queue.py`: one JSON line per intended mutation (a
+comment, a state change, an issue to create, each with its reason), `list`/`status`/`done`;
+the replay is the agent's through the connector — the script holds intent, not
+credentials. `session-start.sh` injects the handoff and a "Tracker debt" section reporting
+the queue's size and age plus the pending-log's, every session until both are empty; doctor
+reports the queue as advisory (a red doctor over an outage would punish the repo for the
+tracker's fault). `KIT_BOOTSTRAP` states the rule; `kit-evolution` step 1 routes mutations
+to the queue and signals to the pending log.
+
+**Consequence.** The outage's age is measured and shown, the debt is replayable from one
+file instead of reconstructed from prose, and a session that ends mid-work leaves the next
+one an exact next step. Minor bump: new hook, new tool, new bootstrap rule. The other
+everything-claude-code ideas (a Stop-hook kit-evolution nudge from telemetry, a phase-based
+compaction nudge, pass@k vs pass^k bars) stay unborrowed for now. Verified: `test-handoff`
+(5) green, hook and reconcile regressions green, doctor OK, install+doctor green on all four
+bundle profiles with PreCompact wired and `.neyra/` ignored.

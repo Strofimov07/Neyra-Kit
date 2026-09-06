@@ -68,6 +68,24 @@ session; a promoted lesson goes there, never inside the `neyra-dev-kit:begin/end
 block in AGENTS.md (that block is regenerated on install, so a lesson written in it
 is silently wiped on the next upgrade).
 
+## Handoff and a tracker outage
+
+Before a session ends with open work — and whenever the context is about to be
+compacted — write `.neyra/handoff.md` (local, never committed): Completed / In progress
+with the exact next step / Blockers / Decisions and why / Context to load first / Pending
+tracker mutations. The next session receives it at start and acts on the pending
+mutations first; overwrite it as state changes and delete it when nothing is open. The
+PreCompact hook stamps a marker into it: what sits above the marker was in context, what
+is below was written after the summary.
+
+When the tracker is down, do not improvise a note: queue every intended mutation with
+`python3 agents/neyra-dev-kit/tracker-queue.py add …` — a comment, a state change, an
+issue to create, each with its reason. The session start reports the queue's size and
+age, and the same for `.neyra/kit-evolution-pending.log`, until both are empty; the first
+session with the tracker back replays the queue before any new work and marks each entry
+`done`. A blink of an outage needs nothing; seven days of silently unrecorded closures is
+what this exists to prevent.
+
 ## When a skill has no subagent here — the degraded gate
 
 Some skills fire under a different subagent name (`simplify-diff` → `code-reviewer`,

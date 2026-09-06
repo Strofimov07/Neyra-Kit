@@ -76,4 +76,34 @@ if [ -n "$ROOT" ] && [ -f "$DIR/../check-skill-mapping.py" ]; then
 $status"
 fi
 
+# Handoff + tracker-outage debt (NEB-1669). A session that ended with open work, or ran
+# through a dead tracker, leaves `.neyra/handoff.md` and a mutation queue behind; the next
+# session must see both before doing anything else — a fallback nobody is reminded of is
+# not a fallback (the prose one the bootstrap named did not even exist on disk in TF).
+if [ -n "$ROOT" ]; then
+  if [ -s "$ROOT/.neyra/handoff.md" ]; then
+    CTX="$CTX
+
+## Handoff from the previous session (.neyra/handoff.md)
+Act on \"Pending tracker mutations\" first, then continue from \"In progress\". Overwrite the file as state changes; delete it when nothing is open.
+
+$(head -c 6000 "$ROOT/.neyra/handoff.md" 2>/dev/null)"
+  fi
+  debt="$(cd "$ROOT" && python3 "$DIR/../tracker-queue.py" status 2>/dev/null || true)"
+  pend="$ROOT/.neyra/kit-evolution-pending.log"
+  if [ -s "$pend" ]; then
+    n="$(grep -c . "$pend" 2>/dev/null || echo 0)"
+    mt="$(stat -f %m "$pend" 2>/dev/null || stat -c %Y "$pend" 2>/dev/null || date +%s)"
+    age="$(( ( $(date +%s) - mt ) / 86400 ))"
+    debt="$debt
+$n pending kit-evolution signal(s) in .neyra/kit-evolution-pending.log (last written ${age}d ago) — file them in the Neyra Skills Kit Linear project now, then clear the file."
+  fi
+  if [ -n "$(printf '%s' "$debt" | tr -d '[:space:]')" ]; then
+    CTX="$CTX
+
+## Tracker debt — replay before new work
+$debt"
+  fi
+fi
+
 nk_emit_context "$CTX" 2>/dev/null || exit 0
