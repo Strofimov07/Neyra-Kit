@@ -93,8 +93,10 @@ $(head -c 6000 "$ROOT/.neyra/handoff.md" 2>/dev/null)"
   pend="$ROOT/.neyra/kit-evolution-pending.log"
   if [ -s "$pend" ]; then
     n="$(grep -c . "$pend" 2>/dev/null || echo 0)"
-    mt="$(stat -f %m "$pend" 2>/dev/null || stat -c %Y "$pend" 2>/dev/null || date +%s)"
-    age="$(( ( $(date +%s) - mt ) / 86400 ))"
+    # Age in days via python: `stat` differs between BSD (-f %m) and GNU (-f = filesystem
+    # mode, which PRINTS "  File: …" before failing), and the fallback chain captured that
+    # text into arithmetic — "File: unbound variable" under set -u on Linux CI (v0.51.1).
+    age="$(python3 -c 'import os,sys,time; print(int((time.time()-os.path.getmtime(sys.argv[1]))//86400))' "$pend" 2>/dev/null || echo 0)"
     debt="$debt
 $n pending kit-evolution signal(s) in .neyra/kit-evolution-pending.log (last written ${age}d ago) — file them in the Neyra Skills Kit Linear project now, then clear the file."
   fi
