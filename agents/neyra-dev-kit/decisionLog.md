@@ -1089,3 +1089,31 @@ is recommended to the owner as the deterministic version of that rule.
 
 **Consequence.** The handoff injection works on both platforms; `test-handoff` still covers
 the pending-log path, and the PR's Linux CI is the second platform's proof. Patch bump.
+
+## 2026-09-07 — backlog-fleet gets an unattended mode that replaces the checkpoint with a record, never removes it (v0.52.0)
+
+**Context.** NEB-2279 §2: `backlog-fleet` said "nothing dispatches until the user picks a
+batch". In an unattended run — the owner away, the task phrased as "разбери долги" — there
+was nobody to ask, and following the rule literally meant doing nothing. The agent recorded
+its independence assumptions, proposed batches, named the deviation aloud and proceeded;
+sound behaviour, but its own decision, so the next agent in the same situation would
+improvise a different one. The owner approved closing this on 2026-09-07 ("доделай все
+сам"). This relaxes a human gate, so the relaxation had to be narrow and checkable.
+
+**Decision.** An explicit fork in step 3. Interactive stays the default and unchanged.
+Unattended exists only on an explicit mandate — the user said so, or an autonomous
+`goal`/`loop` invocation names the backlog; silence is never a mandate. There the
+checkpoint is *replaced*, not skipped, by four bounds: the dispatch ledger records, before
+the first dispatch, the candidate set, every batch with its assumptions and what would have
+been put to the user (which batch, why this order, what was excluded); one batch per run,
+the smallest parallel-safe one, inside the lane cap; checkpoint 2 stays human — nothing
+merges, pushes or acts outward; and the report opens with the substitution line naming the
+record. Where the goal-mode gate file is in use, it is set to `approved — unattended,
+record: <path>` only after the record exists, so the deterministic backstop releases on the
+record, not on a bare word. Two rationalization rows close the two ways this goes wrong:
+inferring a mandate from silence, and reading "unattended" as "the whole backlog".
+
+**Consequence.** An unattended backlog run is now a defined, auditable protocol instead of
+each agent's judgement call; the human still decides everything irreversible and every
+batch after the first. Minor bump: new observable behaviour in one manual skill and its
+governance row. Verified: `lint-skills` clean, `check-skill-mapping` green, doctor OK.
