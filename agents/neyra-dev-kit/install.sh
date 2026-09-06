@@ -125,7 +125,7 @@ write() { # write <dest> <<<content (stdin)
 # kit-manifest.py (which parses this line), so the three can never drift — a mismatch
 # could delete a real kit file or leave one unverified. Add new tooling here, then run
 # `python3 kit-manifest.py --write` (doctor fails on a stale KIT_MANIFEST.sha256).
-NK_TOOL_FILES="KIT_BOOTSTRAP.md doctor.sh source-policy.py lint-skills.py check-skill-mapping.py test-check-skill-mapping.py test-portable-reviewers.py check-egress.py lint-scope.py test-lint-scope.py test-gate-resolution.py check-cross-refs.py test-cross-refs.py check-external-leaks.py test-external-leaks.py lint-plans.py validate-codex-hooks.py product-profile.py check-module-size.py check-repo-hygiene.py kit-manifest.py KIT_MANIFEST.sha256 VERSION"
+NK_TOOL_FILES="KIT_BOOTSTRAP.md doctor.sh source-policy.py lint-skills.py check-skill-mapping.py test-check-skill-mapping.py test-portable-reviewers.py check-egress.py lint-scope.py test-lint-scope.py test-gate-resolution.py check-cross-refs.py test-cross-refs.py check-external-leaks.py test-external-leaks.py lint-plans.py validate-codex-hooks.py product-profile.py check-module-size.py check-repo-hygiene.py kit-manifest.py KIT_MANIFEST.sha256 tracker-queue.py VERSION"
 
 # --- kit-managed file manifest + retirement (NEB-1487) --------------------------
 # sha256 of a file, portable (Linux sha256sum / macOS shasum). Empty on any failure.
@@ -681,10 +681,15 @@ if [[ "${ENABLE_HOOKS}" == "1" ]]; then
     say "copied hook scripts + doctor + linters into agents/neyra-dev-kit/"
   fi
   retire_managed_artifacts   # NEB-1487: prune stale kit files no longer managed, then record the manifest
-  hooks_json='{"SessionStart":[{"hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/session-start.sh\""}]}],"PreToolUse":[{"matcher":"Edit|Write|MultiEdit","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/pre-tool-use-guard.sh\""}]},{"matcher":"Task|Workflow","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/count-task.sh\""}]}],"PostToolUse":[{"matcher":"Edit|Write|MultiEdit","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/post-tool-use-format.sh\""}]}],"Stop":[{"hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/stop-gate.sh\""}]}]}'
+  # .neyra/ is local session state (telemetry, kit manifest, handoff, tracker queue) — never
+  # committed. Same idiom as .mcp.json; a consumer that already ignores it is untouched.
+  if [[ $DRY -eq 0 ]]; then
+    grep -qxF '.neyra/' "$TARGET/.gitignore" 2>/dev/null || printf '.neyra/\n' >> "$TARGET/.gitignore"
+  fi
+  hooks_json='{"SessionStart":[{"hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/session-start.sh\""}]}],"PreToolUse":[{"matcher":"Edit|Write|MultiEdit","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/pre-tool-use-guard.sh\""}]},{"matcher":"Task|Workflow","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/count-task.sh\""}]}],"PostToolUse":[{"matcher":"Edit|Write|MultiEdit","hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/post-tool-use-format.sh\""}]}],"Stop":[{"hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/stop-gate.sh\""}]}],"PreCompact":[{"hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR/agents/neyra-dev-kit/hooks/pre-compact.sh\""}]}]}'
   sdst="$TARGET/.claude/settings.json"
   if [[ $DRY -eq 1 ]]; then
-    say "[dry] reconcile kit hooks (SessionStart/PreToolUse/PostToolUse/Stop) in $sdst"
+    say "[dry] reconcile kit hooks (SessionStart/PreToolUse/PostToolUse/Stop/PreCompact) in $sdst"
   elif [[ -f "$sdst" ]] && command -v jq >/dev/null 2>&1; then
     cp "$sdst" "$sdst.bak"
     tmp="$(mktemp)"
