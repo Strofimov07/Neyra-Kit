@@ -136,6 +136,7 @@ if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; t
   [ -f "$KIT/kit-manifest.py" ] && run "kit manifest" python3 "$KIT/kit-manifest.py" --check "$ROOT"
   [ -f "$KIT/test-kit-manifest.py" ] && run "kit-manifest regression" python3 "$KIT/test-kit-manifest.py"
   [ -f "$KIT/test-code-node.py" ] && run "code-node regression" python3 "$KIT/test-code-node.py"
+  [ -f "$KIT/test-agents-status.py" ] && run "agents-status regression" python3 "$KIT/test-agents-status.py"
 fi
 # NEB-1835: in a consumer, every file the kit ships verbatim must equal canon at the
 # installed VERSION. A consumer ran a pre-0.36 check_code_node.py on kit 0.38.0 for weeks

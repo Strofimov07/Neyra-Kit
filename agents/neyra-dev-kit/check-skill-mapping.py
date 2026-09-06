@@ -52,15 +52,13 @@ def profile_deselected(root):
         return set()
 
 
-def check_agents_table(root, dev_skills, agents_dir, is_consumer=False):
-    """The AGENTS.md '| dev-skill | subagent |' table must match reality:
-    every listed subagent exists, every dev-skill is listed, manual rows match MANUAL."""
-    errs = []
-    # The table lives in AGENTS.md in the canonical repo, but in a consumer repo the kit
-    # renders it into AGENTS.neyra-devkit.md (or it may be in CLAUDE.md). Use the
-    # first candidate that actually contains the table header.
-    lines = []
-    start = None
+def _table_rows(root):
+    """(skill, target-cell) for every row of the '| dev-skill | subagent |' table, or None.
+
+    The table lives in AGENTS.md in the canonical repo, but in a consumer repo the kit
+    renders it into AGENTS.neyra-devkit.md (or it may be in CLAUDE.md). Use the first
+    candidate that actually contains the table header.
+    """
     for cand in (
         "AGENTS.md",
         "AGENTS.neyra-devkit.md",
@@ -71,7 +69,7 @@ def check_agents_table(root, dev_skills, agents_dir, is_consumer=False):
         if not os.path.isfile(p):
             continue
         ls = open(p, encoding="utf-8").read().splitlines()
-        s = next(
+        start = next(
             (
                 i
                 for i, ln in enumerate(ls)
@@ -79,10 +77,63 @@ def check_agents_table(root, dev_skills, agents_dir, is_consumer=False):
             ),
             None,
         )
-        if s is not None:
-            lines, start = ls, s
-            break
-    if start is None:
+        if start is None:
+            continue
+        rows = []
+        for ln in ls[start + 2 :]:  # skip header + |---| separator
+            if not ln.startswith("|"):
+                break
+            cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+            if len(cells) >= 2:
+                rows.append((cells[0].strip("`").strip(), cells[1]))
+        return rows
+    return None
+
+
+def agents_status(root):
+    """Rows of the mapping table whose subagent is absent or not named like the skill.
+
+    NEB-2279 §1: a consumer agent diffed agents/dev-skills/ against .claude/agents/,
+    counted nine skills "without a subagent" and dispatched `contract-safety` — which
+    failed, because that skill's subagent is called contract-checker, four others fire
+    under a different name and five are manual. The table knew; nothing showed it at the
+    moment of dispatch. The session-start bootstrap injects these lines so the
+    divergence is visible before the first call, not after a failed one.
+    """
+    rows = _table_rows(root)
+    if rows is None:
+        return []
+    agents_dir = os.path.join(root, ".claude/agents")
+    deselected = profile_deselected(root)
+    out = []
+    for skill, target in rows:
+        if target.startswith("("):
+            out.append(
+                "- `%s` — manual, no subagent: run agents/dev-skills/%s/SKILL.md inline"
+                % (skill, skill)
+            )
+            continue
+        sub = target.strip("`").strip()
+        if os.path.isfile(os.path.join(agents_dir, sub + ".md")):
+            if sub != skill:
+                out.append("- `%s` → subagent `%s`" % (skill, sub))
+            continue
+        if sub in deselected:
+            why = "settings/product.yml declares it out of scope"
+        elif sub in TEMPLATED:
+            why = "not rendered at install (flag off or MCP id unset)"
+        else:
+            why = "MISSING — drift; re-install from canonical Neyra-Kit"
+        out.append("- `%s` → `%s` not installed: %s — run the SKILL.md inline" % (skill, sub, why))
+    return out
+
+
+def check_agents_table(root, dev_skills, agents_dir, is_consumer=False):
+    """The AGENTS.md '| dev-skill | subagent |' table must match reality:
+    every listed subagent exists, every dev-skill is listed, manual rows match MANUAL."""
+    errs = []
+    rows = _table_rows(root)
+    if rows is None:
         if is_consumer:
             # Published/installed consumers do not own the canonical mapping
             # table. Their shipped subagents are validated from typed file
@@ -93,14 +144,7 @@ def check_agents_table(root, dev_skills, agents_dir, is_consumer=False):
         ]
     deselected = profile_deselected(root)
     listed = set()
-    for ln in lines[start + 2 :]:  # skip header + |---| separator
-        if not ln.startswith("|"):
-            break
-        cells = [c.strip() for c in ln.strip().strip("|").split("|")]
-        if len(cells) < 2:
-            continue
-        skill = cells[0].strip("`").strip()
-        target = cells[1]
+    for skill, target in rows:
         listed.add(skill)
         if skill not in dev_skills:
             errs.append("AGENTS table lists unknown dev-skill '%s'" % skill)
@@ -184,6 +228,17 @@ def _repo_root():
 
 def main():
     root = _repo_root()
+    if "--agents-status" in sys.argv[1:]:
+        # Informational, never fails: the lines the session-start bootstrap injects.
+        lines = agents_status(root)
+        if lines:
+            print("## Skill → subagent map for this repo (rows that differ from the skill name)")
+            print("\n".join(lines))
+            print(
+                "A skill whose subagent is absent still gates: run its SKILL.md inline and "
+                "declare `<skill>: run inline — <reason>` (KIT_BOOTSTRAP, the degraded gate)."
+            )
+        return 0
     skills_dir = os.path.join(root, "agents/dev-skills")
     agents_dir = os.path.join(root, ".claude/agents")
     if not os.path.isdir(skills_dir):

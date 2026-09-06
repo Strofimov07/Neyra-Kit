@@ -76,6 +76,7 @@ Either one saying no means the agent is not installed.
 - Every iteration/turn names the active skill(s)/subagent(s) it used or assumed, and why — per step when running unattended, not only at the end.
 - Report subagent results faithfully: distinguish what was verified from what is still assumed. A green subagent report is not a substitute for the required final checks.
 - Skipping a matrix-required check is allowed only with an explicit one-line reason in the same turn (e.g. "no runtime here, deferred `verify-runtime`").
+- A gate step run without its subagent — a manual skill, a differently-named or profile-deselected agent, a host that forbids spawning agents — is declared as `<skill>: run inline — <reason>` and is never reported as the subagent's verdict (KIT_BOOTSTRAP, the degraded gate).
 
 ## Post-implementation gate (before declaring a code slice done)
 1. `simplify-diff` / `code-reviewer` (quality) — reuse, scope, redundancy; plus `spec-review` (conformance — diff matches the plan/EARS criteria) when a plan or criteria exist.

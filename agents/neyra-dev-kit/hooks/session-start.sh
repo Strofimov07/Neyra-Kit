@@ -65,4 +65,15 @@ interview that fills everything the kit needs to work at full quality."
   fi
 fi
 
+# Skill ↔ subagent rows that differ from the skill name in THIS install (NEB-2279 §1): a
+# consumer agent diffed the skills catalog against .claude/agents/, counted nine "missing"
+# subagents and dispatched `contract-safety` — whose subagent is called contract-checker.
+# The mapping table knew; nothing showed it at the moment of dispatch. Best-effort.
+if [ -n "$ROOT" ] && [ -f "$DIR/../check-skill-mapping.py" ]; then
+  status="$(cd "$ROOT" && python3 "$DIR/../check-skill-mapping.py" --agents-status 2>/dev/null || true)"
+  [ -n "$status" ] && CTX="$CTX
+
+$status"
+fi
+
 nk_emit_context "$CTX" 2>/dev/null || exit 0
