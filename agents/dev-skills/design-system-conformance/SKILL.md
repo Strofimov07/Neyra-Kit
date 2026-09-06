@@ -33,6 +33,7 @@ Keep UI changes visually and behaviorally consistent with the surface.
 ### 3. Check token usage
 
 - Verify typography, spacing, colors, depth, and motion follow the surface rules or design tokens.
+- A token is chosen by **role**, not by name: a text token at low opacity used as a background or border is a fill/stroke token in disguise — flag it and name the token that owns that role.
 
 **Success criteria**
 - Styling is anchored in system choices, not ad hoc values.

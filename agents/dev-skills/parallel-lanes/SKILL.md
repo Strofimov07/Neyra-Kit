@@ -90,13 +90,30 @@ Not guidelines. Violating any one can silently corrupt a sibling's work.
 
 ### 4. Coordinate and integrate
 
+**A lane that died is inspected before it is restarted.** A subagent killed by a
+limit or a crash (`AGENT FAILED — no report`) has usually written every file and died
+before committing. Run `git -C <worktree> status --short` and `git log --oneline
+<base>..<branch>` first: uncommitted work in the tree is salvaged — verify, commit,
+review — not redone. The test is "does the worktree hold unsaved work", never "is the
+worktree empty" (three lanes reported no result; one had committed, two held complete,
+verifiable work).
+
 When a lane is ready:
 
 1. Review each lane's diff independently (`code-reviewer` + `spec-review`)
    before touching the integration branch.
 2. Merge lanes one at a time via `pr-hygiene` (one branch = one PR; integration
    target `dev` if it exists, else `main`): `git merge --no-ff
-   feature/NEB-XXXX-slug`. Resolve conflicts explicitly — never `-X theirs`.
+   feature/NEB-XXXX-slug`. Resolve conflicts explicitly — never `-X theirs`, and
+   never "keep both sides" in a derived file. **Derived files are regenerated, not
+   merged:** generated API clients, `.pbxproj`, lockfiles, schema and public-API
+   hashes are rebuilt from the merged sources with the repo's own generator; a dense
+   hand-written file is rebuilt from base plus this lane's own additions; non-derived
+   lists (locales, changelogs) merge by union. "Keep both" in a generated bridge left
+   four unbalanced braces and eight duplicate declarations that the app scheme never
+   compiled. Two lanes that each added a schema migration collide on the leaf —
+   landing order decides numbering, so the later lane re-parents its migration onto
+   the current leaf (renumber + dependency), never a merge migration.
 3. After each lane lands, run `verify-runtime` + `regression-scout` on the
    **integrated** surface, not just the lane in isolation.
 4. Delete the lane: `git branch -d feature/NEB-XXXX-slug && git worktree remove
@@ -135,6 +152,12 @@ When a lane is ready:
 - "The overlap I just discovered is small — I'll handle it in my lane." The
   independence assumption was the dispatch's approval basis; it expired the
   moment you found the overlap. Report BLOCKED and let the batch re-approve.
+- "The lane failed with no report — restart it." Restarting throws away the work
+  the agent wrote before it died. Inspect the worktree and branch first; salvage,
+  verify, commit.
+- "Conflict in a generated file — I'll keep both sides / merge by hand." A generated
+  file has one source of truth: its generator. Regenerate from the merged sources;
+  hand-merge only non-derived content.
 
 ## Rules
 
@@ -145,4 +168,6 @@ When a lane is ready:
   any destructive git — a blocked checkout exits 128 and leaves HEAD where it was.
 - Integration (merge + verify-runtime + regression-scout) is a named phase, not
   optional.
+- Derived files are regenerated at integration, never hand-merged; a dead lane's
+  worktree is inspected for unsaved work before any restart.
 - Kit VERSION bumps in the one lane that owns the kit change; never in two.

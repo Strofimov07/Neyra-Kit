@@ -62,6 +62,26 @@ that the bug existed and that it is gone.
 **Success criteria**
 - The reviewer knows what the test proves and what still needs runtime verification.
 
+## Static guards and ratchets
+
+A guard test that parses source — a token-drift counter, an a11y label check, an
+allowlist ratchet — is still a test: it must fail for the defect and only for the defect.
+
+- **A metric that can be lowered by changing the spelling of the literal is not a
+  metric.** Before a ratchet lands, name one transformation that lowers the counter
+  without removing the defect (`style={{ backgroundColor: 'rgba(0,0,0,0.04)' }}` →
+  `bg-black/[0.04]` dropped a hex / inline-style count and kept the literal). If one
+  exists, the metric is incomplete — count the defect, not its notation.
+- **An allowlist ratchet carries an obligation to shrink** — a dated target, or an
+  assertion that the list never grows and decreases per release. Without it the
+  allowlist hides the debt behind a green CI (measured: 46 % of the surface
+  allowlisted, CI green, "no drift").
+- **A static guard parses structure, never a fixed window.** "The label appears within
+  the first 700 characters of the component body" went red on a comment; "the child
+  within N lines of the parent" blamed the wrong element for the parent's background.
+  Take the boundary by bracket/tag balance or the AST, so formatting and comments can
+  neither move the defect out of frame nor an innocent line into it.
+
 ## Common rationalizations (and why they're invalid)
 
 | The excuse | Why it's wrong → what to do |
@@ -71,6 +91,8 @@ that the bug existed and that it is gone.
 | "I already see the fix." | Then the test costs ~60s and locks the fix in forever. Still write it first. |
 | "There's no test harness here." | Check first (`grep` for the test runner/config). If there truly is none, say so and fall back to `verify-runtime` with a named proxy — don't silently skip. |
 | "The bug is hard to reproduce in a test." | A repro you can't automate is one you can't prove fixed. Invest in the repro; if genuinely impossible, name the blind spot explicitly. |
+| "The counter went down, so the drift is shrinking." | Only if no notation change can lower it. Name one that does; if it exists, the ratchet measures spelling, not defects (Static guards). |
+| "A character window is good enough for a source guard." | A comment or a reformat moves the code out of the window and the guard goes red on an unrelated edit. Parse by bracket/tag balance (Static guards). |
 
 ## Rules
 
@@ -83,3 +105,5 @@ that the bug existed and that it is gone.
   surfaces — run both.
 - If no automated check is feasible, state that explicitly and route to
   `verify-runtime`; never imply test coverage that does not exist.
+- A source guard or ratchet counts the defect, not its notation; parses structure, not a
+  window; and an allowlist ratchet must shrink on a schedule.

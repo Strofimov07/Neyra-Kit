@@ -81,6 +81,13 @@ for k in dev product growth mgmt; do
 done
 ```
 
+Two more rules for any check the kit ships (same ones `test-first` states for
+consumer guards): a **metric a spelling change can lower is not a metric** — name one
+transformation that drops the counter without removing the defect, and if it exists
+count the defect instead; and a **source guard parses structure, not a fixed
+character/line window** — a comment or a reformat must not move the defect out of
+frame or an innocent line into it.
+
 ## 6. Re-install into a consumer repo
 
 ```bash

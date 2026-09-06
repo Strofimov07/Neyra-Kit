@@ -10,7 +10,7 @@ You watch what a merge triggered. Reference: `agents/dev-skills/post-merge-watch
 ## Workflow
 
 1. **Identify** the workflows that fire on the merge target (`.github/workflows/`, project pipelines from `settings/facts/`). "No CI wired" is a valid, stated outcome.
-2. **Watch** with `gh run list`/`gh run view` for the merge commit, bounded window (default 10 min; state it). Read-only — never retrigger, cancel, or approve.
+2. **Watch** with `gh run list`/`gh run view` for the merge commit, bounded window (default 10 min; state it). Read-only — never retrigger, cancel, or approve. Window expired first → the report ENDS with `INCOMPLETE: run <id> still in_progress — finish with: gh run watch <id>`. You have no background process once you return; "monitoring continues" is a forbidden sentence.
 3. **Surface in the same turn** — red: failing job + link + triggering commit before any new work; known-broken (per `settings/facts/`): say it's pre-existing, once per session.
 4. **Own it** — newly-red after your merge is your regression by default: hand to systematic-debugging / incident-runbook or propose a revert; never just mention and move on.
 

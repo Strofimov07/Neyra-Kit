@@ -45,9 +45,13 @@ silently. This skill is the active half between `pr-hygiene` (opens the PR) and
   disabled — is **not** a completed review, and neither is a `NEUTRAL` check
   conclusion. State that the automated control is absent for this PR: the kit
   gate (`code-reviewer` + the surface's matrix add-ons) is now the only review
-  this PR will get, so re-run it against the final diff rather than relying on a
-  pass from an earlier revision. A skipped reviewer read as "no findings"
-  silently removes the entire automated control.
+  this PR will get. A skipped reviewer read as "no findings" silently removes
+  the entire automated control.
+- **"The reviewer did not run" and "no review happened" are different facts —
+  report which one.** Check the dispatch context before demanding a repeat: if
+  the kit gate already ran on the *final* diff in this session, cite that run as
+  the review. Only a gate that ran on an earlier revision, or none at all, means
+  "re-run against the final diff".
 
   ```bash
   # Did Bugbot run, and how many issues? (summary review — author login `cursor`)
@@ -97,14 +101,16 @@ silently. This skill is the active half between `pr-hygiene` (opens the PR) and
 | "PR's open, no comments — clean, merge it." | Bugbot is async; empty may mean *not reviewed yet*. Confirm the summary review exists (step 2) before calling it clean. |
 | "Queried the comments, got nothing." | You likely selected `cursor`, not `cursor[bot]` — inline findings use the bot login. Re-query (step 3). |
 | "It's probably a false positive, merge past it." | Probably ≠ verified. A real High merged is a prod bug. Run it through receiving-code-review first. |
-| "Bugbot says skipping (or the check is NEUTRAL) — nothing to look at." | It never ran. Say the automated control is absent for this PR, and re-run the kit gate against the final diff — it is now the only review this PR gets. |
+| "Bugbot says skipping (or the check is NEUTRAL) — nothing to look at." | It never ran. Say the automated control is absent for this PR, and make sure the kit gate has run against the final diff — it is now the only review this PR gets. |
+| "Bugbot skipped, so the orchestrator must re-run code-reviewer." | Only if it has not run on this revision. A gate that already ran on the final diff in this session *is* the review — cite it. Demanding a repeat of a review that happened conflates "reviewer skipped" with "no review". |
 
 ## Rules
 
 - Read-only on the PR — never auto-apply a fix, dismiss a finding, or merge.
 - Bounded, stated window; "not reviewed yet" is never reported as "clean".
 - `skipping` / usage-limited / disabled / `NEUTRAL` ≠ reviewed: name the automated
-  control absent for that PR and re-run the kit gate against the final diff.
+  control absent for that PR, then state whether the kit gate has run on the final
+  diff (cite it) or still must.
 - Two logins: summary = `cursor`, inline findings = `cursor[bot]`.
 - Every High-severity finding gets a receiving-code-review verdict before merge.
 

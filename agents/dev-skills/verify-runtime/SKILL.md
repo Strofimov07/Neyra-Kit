@@ -38,6 +38,16 @@ Prove that the shipped change works on the real surface, not only in static anal
   (`grep -rn '<symbol>' <tests-dir>`), run every file it returns, then the suite for the
   touched package — a targeted run stays green while a sibling mock drifts out of sync
   with the real signature, and CI catches it only after merge.
+- **Confirm the gate you ran actually builds the changed target.** An app scheme that
+  does not include a package reports `BUILD SUCCEEDED` while that package is broken; a
+  root test command can skip a workspace member or sub-package. Build or test the changed
+  unit through its own entry point (`swift test --package-path <pkg>`, the package's own
+  `pytest` / `npm test`) and name that entry point in the report.
+- **Take the exit code from the command itself, never from a pipe.** `xcodebuild … | grep
+  -E "SUCCEEDED|error:" | tail` and `pre-commit … | tail -30` both exit 0 when the left
+  side failed, and "no FAILED line in the output" is not a verdict — a build that could not
+  find its destination printed neither. Run the command unpiped, or under `set -o pipefail`,
+  or read `${PIPESTATUS[0]}`, and quote the code you read.
 
 - A repo often has **several independent suites** (unit, integration, end-to-end,
   and a separate front-end runner) that no single command covers. Enumerate them
@@ -92,6 +102,8 @@ Prove that the shipped change works on the real surface, not only in static anal
 | "The targeted tests I ran are green." | Targeted scope proves the lines you touched, not the mocks and callers still assuming the old shape. Widen before pushing. |
 | "It's green locally, CI will match." | Local fallbacks (in-memory store/limiter) are not the CI backend. Same backend or an explicit fresh mock — otherwise CI is your first real run. |
 | "Local `npm ci` passed — the lock is fine." | A lock generated on macOS omits the Linux native-binding entries (rollup/esbuild) CI installs from, and a newer local npm dedupes differently. Reproduce CI's npm (`npx npm@<CI ver> ci`) or grep the `@rollup/rollup-linux-x64-gnu` entry before trusting green. |
+| "The app scheme built green, so the package is fine." | A scheme builds only what it includes; a package it omits can be broken under a green build. Build the changed unit through its own entry point and name it (step 2). |
+| "The output showed nothing alarming, so it passed." | You read a pipe's exit code, not the command's. Two verifications were declared done that way while the build and the pre-commit hook had both failed. Unpiped, `pipefail`, or `PIPESTATUS` — and quote the code (step 2). |
 
 ## Rules
 
@@ -99,3 +111,5 @@ Prove that the shipped change works on the real surface, not only in static anal
 - A green local run of an infra-backed test is not proof: match CI's backend or use an
   explicit fresh mock, and say which.
 - If the platform lacks a reliable success signal, verify the nearest observable proxy and name the blind spot.
+- The exit code of the command is the verdict; a `| grep` / `| tail` over its output is not.
+- Verify with the gate that builds the changed target, not with a scheme or root command that omits it.

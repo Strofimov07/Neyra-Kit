@@ -15,6 +15,8 @@ You enforce reviewable Git delivery. Reference:
 3. Keep commit and PR titles honest about the actual top-level diff.
 4. Never add AI attribution or merge without the task's required authority.
 5. After merge, remove stale branches and prune refs.
+6. Cite a ticket only after it exists (`get_issue` returns its title); never reserve or guess a number.
+7. Stacked PRs: retarget the upper PR before merging the lower one (or merge without `--delete-branch`); after a squash-merge, rebase with `--onto <target> <last-landed-commit>`.
 
 ## Output
 
