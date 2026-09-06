@@ -1069,3 +1069,23 @@ everything-claude-code ideas (a Stop-hook kit-evolution nudge from telemetry, a 
 compaction nudge, pass@k vs pass^k bars) stay unborrowed for now. Verified: `test-handoff`
 (5) green, hook and reconcile regressions green, doctor OK, install+doctor green on all four
 bundle profiles with PreCompact wired and `.neyra/` ignored.
+
+## 2026-09-07 — Hotfix: the pending-log age is computed in python, not stat (v0.51.1)
+
+**Context.** v0.51.0 turned main red in CI. `session-start.sh` computed the age of
+`.neyra/kit-evolution-pending.log` with `stat -f %m "$f" || stat -c %Y "$f"`. On macOS the
+first form works. On GNU stat, `-f` means filesystem mode: it prints `  File: …` to stdout
+*before* failing on the `%m` operand, the fallback then appended the epoch, and the
+arithmetic expansion met the word `File` — "File: unbound variable" under `set -u`. The
+local test was green because it ran on BSD stat; the PR's CI was red and the merge script,
+running under zsh with `set -e`, did not stop on a function whose last command was a failing
+`&&` list — the same masked-exit-code class the kit promoted into `verify-runtime` in v0.47.0.
+
+**Decision.** Compute the age in python (`os.path.getmtime`), which the hooks already
+depend on; no `stat` anywhere in the hook. Two signals recorded: platform-specific shell
+utilities inside hooks are computed in python, and a merge script reads the CI verdict
+explicitly rather than trusting errexit. Branch protection requiring the Kit integrity check
+is recommended to the owner as the deterministic version of that rule.
+
+**Consequence.** The handoff injection works on both platforms; `test-handoff` still covers
+the pending-log path, and the PR's Linux CI is the second platform's proof. Patch bump.
