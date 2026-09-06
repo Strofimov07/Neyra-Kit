@@ -131,6 +131,20 @@ if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; t
   [ -f "$KIT/test-lint-plans.py" ] && run "plans-lint regression" python3 "$KIT/test-lint-plans.py"
   [ -f "$KIT/test-format-hook.py" ] && run "format-hook regression" python3 "$KIT/test-format-hook.py"
   [ -f "$KIT/test-install-render.py" ] && run "install-render regression" python3 "$KIT/test-install-render.py"
+  # NEB-1835: the shipped-file manifest must match the tree at this VERSION — a stale one
+  # would make every consumer's bundle-integrity check lie in one direction or the other.
+  [ -f "$KIT/kit-manifest.py" ] && run "kit manifest" python3 "$KIT/kit-manifest.py" --check "$ROOT"
+  [ -f "$KIT/test-kit-manifest.py" ] && run "kit-manifest regression" python3 "$KIT/test-kit-manifest.py"
+  [ -f "$KIT/test-code-node.py" ] && run "code-node regression" python3 "$KIT/test-code-node.py"
+fi
+# NEB-1835: in a consumer, every file the kit ships verbatim must equal canon at the
+# installed VERSION. A consumer ran a pre-0.36 check_code_node.py on kit 0.38.0 for weeks
+# because one copy was refreshed and another was not, and nothing compared them. MODIFIED
+# or MISSING under agents/neyra-dev-kit → FAIL (hand-edit or partial upgrade: re-install);
+# a file the kit no longer ships but an older install left behind → WARN (the retirement
+# pass deletes only what it recorded). Full run only — see the --fast rationale above.
+if [ -f "$ROOT/.neyra-dev-kit.source" ] && [ -f "$KIT/kit-manifest.py" ]; then
+  run "bundle integrity" python3 "$KIT/kit-manifest.py" --verify "$ROOT"
 fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Product profile + project-fact anchors (advisory — never fail the run).

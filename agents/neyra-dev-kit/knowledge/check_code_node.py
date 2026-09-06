@@ -36,10 +36,18 @@ def default_base():
     Определение через origin/HEAD снимает угадывание там, где оно настроено; список
     имён — best-effort fallback. Переопределяется переменной KNOWLEDGE_DIFF_BASE.
     """
-    candidates = []
     env_base = os.environ.get("KNOWLEDGE_DIFF_BASE")
     if env_base:
-        candidates.append(env_base)
+        # An explicit override that does not resolve is an error, not a hint: falling
+        # through to the guessed list would silently measure the wrong branch while the
+        # caller believes its setting is in effect (NEB-1835 review note 1).
+        try:
+            return subprocess.check_output(
+                ["git", "merge-base", "HEAD", env_base], text=True, stderr=subprocess.DEVNULL
+            ).strip()
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            sys.exit(f"KNOWLEDGE_DIFF_BASE={env_base!r} does not resolve to a ref with a merge-base against HEAD")
+    candidates = []
     try:
         head = subprocess.check_output(
             ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
@@ -58,7 +66,8 @@ def default_base():
         "origin/master",
         "master",
     ]
-    for ref in candidates:
+    # origin/HEAD usually resolves to a name already in the list — dedupe, keep order.
+    for ref in dict.fromkeys(candidates):
         try:
             return subprocess.check_output(
                 ["git", "merge-base", "HEAD", ref], text=True, stderr=subprocess.DEVNULL
@@ -87,8 +96,11 @@ def changed_files(args):
 def parse_map(path):
     """Минимальный парсер code_to_node: каждый '- paths: [...]' с 'nodes:'/'also_check:'."""
     if not os.path.isfile(path):
-        print(f"knowledge-map not found: {path}", file=sys.stderr)
-        return []
+        # A missing map must read differently from "no mapped paths touched": the
+        # check did not run at all, and a consumer copy sitting next to no map would
+        # otherwise print a false no-op (NEB-1835 consumer evidence).
+        print(f"knowledge-map not found: {path} — the code→node check did not run")
+        return None
     text = open(path, encoding="utf-8").read()
     section = text.split("code_to_node:", 1)
     if len(section) < 2:
@@ -122,6 +134,8 @@ def main():
     strict = "--strict" in args
     files = changed_files(args)
     rules = parse_map(MAP)
+    if rules is None:
+        return 2 if strict else 0
     hits = []
     for f in files:
         for r in rules:

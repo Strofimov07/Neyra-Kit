@@ -102,4 +102,4 @@ Remote Config activation, production measurement, and rollback evidence.
 - Re-running is idempotent; the skill sync uses `rsync --delete` (when available) so skills removed upstream are pruned in the target.
 
 ## Updating the kit
-Edit the canonical skills/subagents or templates here, bump [VERSION](VERSION), open a reviewed Neyra-Kit PR, and then re-run `install.sh` for each selected consumer repo. Shared behavior is never authored in a product repository.
+Edit the canonical skills/subagents or templates here, bump [VERSION](VERSION), run `python3 kit-manifest.py --write` (regenerates [KIT_MANIFEST.sha256](KIT_MANIFEST.sha256), the sha256 of every file the installer ships verbatim — doctor fails on a stale copy), open a reviewed Neyra-Kit PR, and then re-run `install.sh` for each selected consumer repo. A consumer's `doctor` recomputes those hashes ("bundle integrity"), so a hand-edited or half-upgraded kit file is reported instead of running silently. Shared behavior is never authored in a product repository.

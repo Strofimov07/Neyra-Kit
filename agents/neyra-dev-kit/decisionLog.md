@@ -926,3 +926,39 @@ autonomous mode), NEB-1669 (tracker-down degraded mode), NEB-1835 §1 (bundle ch
 each is structural, not prose, and gets its own change. Verified: `lint-skills` clean,
 `lint-scope` no new project facts, `check-skill-mapping` and `check-cross-refs` green,
 doctor OK.
+
+## 2026-09-07 — A shipped file gets a checksum, and the consumer's doctor recomputes it (v0.48.0)
+
+**Context.** NEB-1835 §1: a consumer upgraded to kit 0.38.0 was still running a pre-0.36
+`check_code_node.py`. The installer had refreshed the `docs/knowledge/` copy and left a
+legacy copy under `agents/neyra-dev-kit/knowledge/` — a path the kit no longer ships and
+the retirement pass (NEB-1487) never recorded, so by its own rule (RET-5: never touch what
+you did not record) it stayed. A second consumer's `main` carried a v0.8.0 copy next to no
+map at all, printing "no mapped paths touched" where the check had not run. And
+`source-policy` could only say "this is generated" — not whether a diff was a hand-edit or
+a legitimate installer refresh, so an agent reverted a correct update by guesswork. Nothing
+compared the installed bundle with canon at the installed VERSION.
+
+**Decision.** `kit-manifest.py` with three modes. `--write` generates
+`KIT_MANIFEST.sha256`: the sha256 of every file `install.sh` ships verbatim — hooks, the
+host shim, `NK_TOOL_FILES` (parsed from install.sh so the list cannot drift from the copy
+loop), the orchestration driver, and the three knowledge files at their consumer paths.
+`VERSION` and the manifest itself are unlisted. `--check` runs in the canonical doctor and
+fails on a stale manifest, so a release cannot ship one. `--verify` runs in a consumer's
+doctor as "bundle integrity": MODIFIED anywhere and MISSING under `agents/neyra-dev-kit/`
+FAIL (hand-edit or partial upgrade — re-install; an intentional change belongs in canon), a
+manifest version that disagrees with `.neyra-dev-kit.version` FAILs (partial upgrade), a
+file inside the bundle that the manifest does not list WARNs as UNMANAGED (the exact
+NEB-1835 leftover — reported, never deleted, because the retirement rule stands), and a
+removed `docs/knowledge/` scaffold WARNs. The same ticket's review notes for
+`check_code_node.py` land alongside: an explicit `KNOWLEDGE_DIFF_BASE` that does not
+resolve exits with an error instead of degrading to the guessed list; candidates are
+deduplicated; a missing map prints "the code→node check did not run" (exit 2 under
+`--strict`) instead of a false no-op. Full-run only, per the NEB-1612 rationale — a locally
+patched hook must not block every Stop.
+
+**Consequence.** Bundle drift in a consumer is a doctor line, not a weeks-long silence;
+"generated, do not edit" is now checkable rather than declared. The release checklist gains
+one step (`kit-manifest.py --write`, last), enforced by doctor. Minor bump: two new checks.
+Verified: `test-kit-manifest` (7) and `test-code-node` (3) green, doctor OK, install+doctor
+green on all four bundle profiles with "bundle integrity: ok" in each.
