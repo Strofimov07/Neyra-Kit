@@ -64,9 +64,10 @@ CONTRACT_STACK=""; LINEAR_WORKSPACE=""; LINEAR_ROUTING=""; LINEAR_LABELS=""
 # per-user/per-connection — a friend MUST set their own (find it via Claude Code /mcp).
 # Empty → linear-router is skipped (never installed broken).
 LINEAR_MCP_PREFIX=""
-# Notion MCP instance id for portable agents that use Notion tools (same per-user
-# semantics as LINEAR_MCP_PREFIX). Empty -> {{NOTION_MCP_PREFIX}} placeholders stay
-# inert (those tools inactive), everything else works.
+# Notion / Figma MCP instance ids for portable agents that use those tools (same per-user
+# semantics as LINEAR_MCP_PREFIX). Empty -> the dependent `tools:` entries are DROPPED from
+# the generated agent (NEB-1799): a literal {{NOTION_MCP_PREFIX}}__x left behind is a phantom
+# tool that fails open and silent. An agent with fewer tools is correct; everything else works.
 NOTION_MCP_PREFIX=""
 FIGMA_MCP_PREFIX=""
 # Optional project-scoped Neyra MCP entrypoint. Consumer config must provide it;
@@ -416,15 +417,37 @@ if [[ -f "$KIT_DIR/product-profile.py" ]]; then
 fi
 nk_agent_skipped() { [[ -n "$SKIP_AGENTS" ]] && printf '%s\n' "$SKIP_AGENTS" | grep -qxF -- "$1"; }
 
+# MCP-prefix rendering for a portable agent file (NEB-1799). MCP server ids are per-user, so
+# published agents carry {{LINEAR_MCP_PREFIX}} / {{NOTION_MCP_PREFIX}} / {{FIGMA_MCP_PREFIX}}
+# in their `tools:` line. A set prefix is substituted. An UNSET one must not survive as a
+# literal placeholder — a `tools:` entry that cannot resolve fails open and silent (the agent
+# loads with a phantom tool) — so its dependent entries are dropped, the line is kept
+# well-formed (no leading/double/trailing comma), and a `tools:` line left with nothing is
+# removed (= inherit the default tool set). Values travel via env, never into the perl code.
+nk_render_agent_prefixes() { # nk_render_agent_prefixes <agent-file>
+  local f="$1" k
+  for k in LINEAR_MCP_PREFIX NOTION_MCP_PREFIX FIGMA_MCP_PREFIX; do
+    if [[ -n "${!k:-}" ]]; then
+      NK_PH="$k" NK_VAL="${!k}" perl -pi -e 's/\{\{\Q$ENV{NK_PH}\E\}\}/$ENV{NK_VAL}/g' "$f"
+    else
+      NK_PH="$k" perl -pi -e '
+        if (/^tools:/) {
+          my $k = $ENV{NK_PH};
+          s/\s*,?\s*\{\{\Q$k\E\}\}__[^,\s]+//g;   # drop every entry that depends on the unset prefix
+          s/^tools:\s*,\s*/tools: /;                 # a dropped FIRST entry leaves a leading comma
+          $_ = "" if /^tools:\s*$/;                  # nothing left → inherit default tools
+        }' "$f"
+    fi
+  done
+}
+
 # True when the installed copy is byte-identical to what THIS install would write, i.e.
 # an untouched kit file. Same policy as retire_managed_artifacts: never delete content a
 # human may have edited.
 nk_agent_pristine() { # nk_agent_pristine <agent> <installed-path>
   local rendered; rendered="$(mktemp)"
   cp "$CANON_AGENTS/$1.md" "$rendered" || { rm -f "$rendered"; return 1; }
-  [[ -n "$LINEAR_MCP_PREFIX" ]] && perl -pi -e "s/\Q{{LINEAR_MCP_PREFIX}}\E/$LINEAR_MCP_PREFIX/g" "$rendered"
-  [[ -n "${NOTION_MCP_PREFIX:-}" ]] && perl -pi -e "s/\Q{{NOTION_MCP_PREFIX}}\E/$NOTION_MCP_PREFIX/g" "$rendered"
-  [[ -n "${FIGMA_MCP_PREFIX:-}" ]] && perl -pi -e "s/\Q{{FIGMA_MCP_PREFIX}}\E/$FIGMA_MCP_PREFIX/g" "$rendered"
+  nk_render_agent_prefixes "$rendered"
   local same=1; cmp -s "$rendered" "$2" || same=0
   rm -f "$rendered"
   [[ $same -eq 1 ]]
@@ -453,14 +476,10 @@ for a in "${PORTABLE_AGENTS[@]}"; do
   fi
   if [[ -f "$CANON_AGENTS/$a.md" ]]; then
     do_ "cp '$CANON_AGENTS/$a.md' '$TARGET/.claude/agents/$a.md'"
-    # Published copies carry {{LINEAR_MCP_PREFIX}}/{{NOTION_MCP_PREFIX}}
-    # placeholders (MCP ids are per-user) — substitute the consumer's own ids.
-    # No-op in the canonical clone (real ids, no placeholders) and in dry-run.
-    if [[ $DRY -eq 0 ]]; then
-      [[ -n "$LINEAR_MCP_PREFIX" ]] && perl -pi -e "s/\Q{{LINEAR_MCP_PREFIX}}\E/$LINEAR_MCP_PREFIX/g" "$TARGET/.claude/agents/$a.md"
-      [[ -n "${NOTION_MCP_PREFIX:-}" ]] && perl -pi -e "s/\Q{{NOTION_MCP_PREFIX}}\E/$NOTION_MCP_PREFIX/g" "$TARGET/.claude/agents/$a.md"
-      [[ -n "${FIGMA_MCP_PREFIX:-}" ]] && perl -pi -e "s/\Q{{FIGMA_MCP_PREFIX}}\E/$FIGMA_MCP_PREFIX/g" "$TARGET/.claude/agents/$a.md"
-    fi
+    # Published copies carry {{LINEAR_MCP_PREFIX}}/{{NOTION_MCP_PREFIX}}/{{FIGMA_MCP_PREFIX}}
+    # placeholders (MCP ids are per-user) — substitute the consumer's own ids and drop the
+    # entries of any id left unset (NEB-1799). Skipped in dry-run.
+    [[ $DRY -eq 0 ]] && nk_render_agent_prefixes "$TARGET/.claude/agents/$a.md"
     say "$a"
   else say "WARN: $a.md not found in canon ($CANON_AGENTS) — skipped"; fi
 done
@@ -742,13 +761,16 @@ fi
 # Doc-freshness routine spec (NEB-1366). install.sh cannot register a schedule
 # (cron lives in the scheduler, not the file) — it STAGES the spec; the agent
 # registers it weekly on first session (see KIT_BOOTSTRAP). Best-effort, never fails.
+# Copied VERBATIM: the spec runs from the repository root and names no machine path.
+# It used to render the installer's absolute repo path into this tracked file, so every
+# install on another machine rewrote it and a home directory leaked into history (NEB-2013).
 if [[ -f "$KIT_DIR/routines/doc-freshness.SKILL.md" ]]; then
   rdst="$TARGET/docs/knowledge/routines"
   if [[ $DRY -eq 1 ]]; then
     say "[dry] stage doc-freshness routine spec → $rdst/doc-freshness.SKILL.md"
   else
     mkdir -p "$rdst" 2>/dev/null \
-      && sed "s#{{REPO_PATH}}#$TARGET#g" "$KIT_DIR/routines/doc-freshness.SKILL.md" > "$rdst/doc-freshness.SKILL.md" 2>/dev/null \
+      && cp "$KIT_DIR/routines/doc-freshness.SKILL.md" "$rdst/doc-freshness.SKILL.md" 2>/dev/null \
       && say "staged doc-freshness routine spec (register weekly via scheduler — cron is app-side)" || true
   fi
 fi

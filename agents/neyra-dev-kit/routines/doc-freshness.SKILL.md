@@ -3,13 +3,15 @@ name: doc-freshness
 description: Weekly doc/canon freshness sweep (memory + code→node + hub review-dates + wiki host hygiene)
 ---
 
-Weekly documentation-freshness sweep for the repo at {{REPO_PATH}}. Calendar backstop
+Weekly documentation-freshness sweep for this repository. Run every command below from the
+repository root — the spec names no machine path on purpose (NEB-2013: an absolute path made this
+tracked file differ per installer and leaked a home directory into history). Calendar backstop
 for the knowledge graph (see docs/knowledge/MEMORY_GRAPH.md / MEMORY_OPERATIONS.md).
 Do NOT auto-edit the canon — report overdue / drift only.
 
 Run four checks:
-1. `cd {{REPO_PATH}} && python3 docs/knowledge/memory_freshness.py` — overdue memory nodes (last_verified vs cadence).
-2. `cd {{REPO_PATH}} && python3 docs/knowledge/check_code_node.py` — code changes needing a canon-node update (code→node).
+1. `python3 docs/knowledge/memory_freshness.py` — overdue memory nodes (last_verified vs cadence).
+2. `python3 docs/knowledge/check_code_node.py` — code changes needing a canon-node update (code→node).
    No ref is passed on purpose: the script resolves the integration branch itself (`KNOWLEDGE_DIFF_BASE`, then `origin/HEAD`, then common names).
    A repo that integrates on a branch other than its default one sets `KNOWLEDGE_DIFF_BASE` — hardcoding a ref here is how this check silently
    measured one commit instead of a branch before.

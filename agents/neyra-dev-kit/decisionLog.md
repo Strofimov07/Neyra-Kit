@@ -853,3 +853,36 @@ diff against what was actually vendored.
 egress guard green. The general lesson is recorded as a signal: a vendored pin is a fact with
 a freshness date, and `doc-freshness` is the natural owner of a "compare `SOURCE.md` SHA to
 upstream HEAD" check — reporting only, like its wiki host check.
+
+## 2026-09-07 — Four consumer-filed installer and hook defects (v0.46.1)
+
+**Context.** Four tickets sat in the kit backlog for three to five weeks, each filed from a
+real consumer and each still reproducible on canon: NEB-1800 (`lint-plans` matched the
+Linear status word `Todo` as a placeholder — the AI Browser doctor was red on 26 plan docs),
+NEB-1799 (`install.sh` substituted an MCP prefix only when set, so an unset
+`FIGMA_MCP_PREFIX` shipped into `solution-designer` as a literal `{{FIGMA_MCP_PREFIX}}__x`
+— a phantom tool that fails open and silent), NEB-2013 (the staged doc-freshness routine
+carried the installer's absolute repo path in a tracked file, so every machine rewrote it),
+NEB-1901 (`post-tool-use-format` chose `ruff format` because *any* `pyproject.toml` counted
+as opt-in, in a repo declaring `[tool.black]` with CI gating on black 23.12.1 — untouched
+hunks were rewritten and CI lint went red).
+
+**Decision.** Fix all four in canon, each with a regression test wired into doctor:
+(1) bare placeholder tokens match case-sensitively (`TODO`, not `Todo`), phrases stay
+case-insensitive; (2) one renderer, `nk_render_agent_prefixes`, used by both the copy loop
+and the pristine check — a set prefix is substituted, an unset one drops its dependent
+`tools:` entries and keeps the line well-formed; a consumer's doctor fails on any unrendered
+`{{...}}` in `.claude/agents/`; (3) the routine spec runs from the repository root and is
+copied verbatim; (4) Python formatting follows the repo's *declaration* — `[tool.black]`
+or a pre-commit black hook wins, else `[tool.ruff]`/`ruff.toml`, else nothing. A bare
+`pyproject.toml` is no longer an opt-in. Running a pre-commit-pinned black through
+`pre-commit run` was considered and left out: an uncached environment can take minutes
+inside a per-edit hook.
+
+**Consequence.** An always-red consumer doctor goes green without touching its plan docs;
+a generated agent never carries a phantom tool; the routine file is byte-identical across
+machines and can be tracked; the formatter hook can no longer fight a repo's CI formatter.
+Bundled as one patch release because the four are independent one-file fixes with no
+shared behaviour, the same shape as v0.31.0 and v0.36.0. Verified: new regressions
+(`test-lint-plans`, `test-format-hook`, `test-install-render`) green, existing hook and
+reconcile regressions green, doctor OK, install+doctor green on all four bundle profiles.

@@ -91,11 +91,12 @@ For goal-okr's personal mode — `settings/private/` (must be gitignored).
 ## Wiring MCP tools (Linear / Notion)
 
 Some subagents reference MCP tools via `{{LINEAR_MCP_PREFIX}}` /
-`{{NOTION_MCP_PREFIX}}` placeholders — MCP server ids are per-user. Set yours
-in the install config (`LINEAR_MCP_PREFIX=...`, `NOTION_MCP_PREFIX=...` — find
-them in Claude Code via `/mcp`) and `install.sh` substitutes them at install
-time. Left empty, those tools are simply inactive for the subagent; everything
-else works.
+`{{NOTION_MCP_PREFIX}}` / `{{FIGMA_MCP_PREFIX}}` placeholders — MCP server ids
+are per-user. Set yours in the install config (`LINEAR_MCP_PREFIX=...`,
+`NOTION_MCP_PREFIX=...` — find them in Claude Code via `/mcp`) and `install.sh`
+substitutes them at install time. Left empty, the dependent tool entries are
+dropped from the generated subagent (never left as a literal placeholder, which
+would be a phantom tool); everything else works.
 
 ## Quick start
 
