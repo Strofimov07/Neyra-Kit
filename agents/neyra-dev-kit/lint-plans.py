@@ -4,6 +4,12 @@
 A plan exists to close decisions before code is written. Placeholders reopen
 them, so they are banned. Pure stdlib.
 
+The bare tokens (TODO / TBD / FIXME) match case-SENSITIVELY: the placeholder
+convention is upper-case, while `Todo` is a Linear status name that task-anchor
+prose legitimately uses ("remains `Todo`"). NEB-1800: matching it case-insensitively
+kept a consumer's doctor red on 26 plan docs, and an always-red gate stops being a
+gate. The phrase patterns stay case-insensitive.
+
 Usage: lint-plans.py [file-or-dir ...]   (default: docs/plans)
 Exits non-zero if any plan contains a forbidden placeholder.
 """
@@ -11,17 +17,18 @@ import os
 import re
 import sys
 
-# Forbidden placeholder patterns (case-insensitive, word-boundary where sensible).
+# Forbidden placeholder patterns: (regex, flags). Bare tokens are case-sensitive
+# (see module docstring); phrases are case-insensitive.
 FORBIDDEN = [
-    r"\bTBD\b",
-    r"\bTODO\b",
-    r"\bFIXME\b",
-    r"\bimplement later\b",
-    r"\bsimilar to (task|the above)\b",
-    r"\badd validation\b",
-    r"\bwrite tests for the above\b",
+    (r"\bTBD\b", 0),
+    (r"\bTODO\b", 0),
+    (r"\bFIXME\b", 0),
+    (r"\bimplement later\b", re.IGNORECASE),
+    (r"\bsimilar to (task|the above)\b", re.IGNORECASE),
+    (r"\badd validation\b", re.IGNORECASE),
+    (r"\bwrite tests for the above\b", re.IGNORECASE),
 ]
-PATTERNS = [re.compile(p, re.IGNORECASE) for p in FORBIDDEN]
+PATTERNS = [re.compile(p, flags) for p, flags in FORBIDDEN]
 
 
 def lint_file(path):

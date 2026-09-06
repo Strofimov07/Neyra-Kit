@@ -128,6 +128,9 @@ if [ -f "$ROOT/.neyra-kit-canonical" ] && [ -f "$KIT/test-source-policy.py" ]; t
   [ -f "$KIT/test-product-profile.py" ] && run "product-profile regression" python3 "$KIT/test-product-profile.py"
   [ -f "$KIT/test-repo-hygiene.py" ] && run "repo-hygiene regression" python3 "$KIT/test-repo-hygiene.py"
   [ -f "$KIT/test-profile-gating.py" ] && run "profile-gating regression" python3 "$KIT/test-profile-gating.py"
+  [ -f "$KIT/test-lint-plans.py" ] && run "plans-lint regression" python3 "$KIT/test-lint-plans.py"
+  [ -f "$KIT/test-format-hook.py" ] && run "format-hook regression" python3 "$KIT/test-format-hook.py"
+  [ -f "$KIT/test-install-render.py" ] && run "install-render regression" python3 "$KIT/test-install-render.py"
 fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Product profile + project-fact anchors (advisory — never fail the run).
@@ -180,6 +183,21 @@ else
   echo "note: skip — non-dev bundle (kit='${kit_profile:-unspecified}') ships no pr-review-watch/security-review"
 fi
 run "skill↔subagent map"   python3 "$KIT/check-skill-mapping.py"
+# NEB-1799: a generated agent must never carry an unrendered {{PLACEHOLDER}} — a `tools:`
+# entry that cannot resolve fails open and silent (the agent loads with a phantom tool).
+# Consumer-only: the canonical .claude/agents legitimately hold the per-user MCP-prefix
+# placeholders that install.sh renders (or drops, when the prefix is unset).
+if [ -f "$ROOT/.neyra-dev-kit.source" ] && [ -d "$ROOT/.claude/agents" ]; then
+  echo "── rendered placeholders"
+  leaked="$(grep -lE '\{\{[A-Z_]+\}\}' "$ROOT"/.claude/agents/*.md 2>/dev/null || true)"
+  if [ -n "$leaked" ]; then
+    echo "FAIL: unrendered {{...}} placeholder in generated agent(s) — a phantom tool; re-install from canonical Neyra-Kit (>= v0.46.1 drops the entries of an unset MCP prefix):"
+    printf '%s\n' "$leaked" | sed "s|^$ROOT/||; s/^/   ✗ /"
+    fail=1
+  else
+    echo "ok: no unrendered placeholders in .claude/agents"
+  fi
+fi
 run "plans lint"           python3 "$KIT/lint-plans.py"
 run "bundled-skill egress" python3 "$KIT/check-egress.py"
 run "scope-lint regression" python3 "$KIT/test-lint-scope.py"

@@ -25,6 +25,9 @@
 #                                Set 0 for a headless repo with no UI — skips ~2.7M / 149 files.)
 #   LINEAR_MCP_PREFIX            your Linear MCP server-instance id, e.g. mcp__<hash> (find it in Claude Code via /mcp).
 #                                Per-user — a friend MUST set their own. Empty → linear-router is skipped (not installed broken).
+#   NOTION_MCP_PREFIX            same for Notion / Figma: per-user MCP ids used by the product/mgmt agents' tools.
+#   FIGMA_MCP_PREFIX             Empty → those tool entries are DROPPED from the generated agent (never left as a
+#                                literal {{...}} placeholder — a tool that cannot resolve is a phantom, NEB-1799).
 #
 # SAFETY: configs/<repo>.sh is executed as shell (sourced) by the installer —
 # only run the installer with a config you have reviewed.
