@@ -48,7 +48,7 @@ start with `test-first` — a failing test (RED) before the change.
 | incident-runbook | incident-runbook | production incident / on-call triage |
 | batch-migration | (manual — approval-gated) | explicit large mechanical migration delegation only |
 | goal-mode | (manual — opt-in) | autonomous goal orchestration — checkpointed, capped, Linear-anchored |
-| backlog-fleet | (manual — opt-in) | existing backlog → approved parallel batches → lanes, mid-flight independence re-check |
+| backlog-fleet | (manual — opt-in) | existing backlog → approved parallel batches → lanes, mid-flight independence re-check; unattended only on an explicit mandate: a written record replaces checkpoint 1, one batch, checkpoint 2 stays human |
 | grounding-gate | grounding-gate | prompts / answer assembly / retrieval wiring / source corpus change |
 | retrieval-review | retrieval-review | query, filter, ranking, rerank, chunking or index-mapping change |
 | eval-baseline | eval-baseline | running or reporting an eval, benchmark, cost measurement or A/B |

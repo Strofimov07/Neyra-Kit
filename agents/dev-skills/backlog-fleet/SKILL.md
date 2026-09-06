@@ -46,13 +46,37 @@ analysis contradicts it, pausing the batch instead of silently colliding.
 - Every batch has explicit written assumptions; conflicted tickets are
   sequenced, not forced parallel.
 
-### 3. CHECKPOINT — human approves the batch
+### 3. CHECKPOINT — human approves the batch (or, unattended, a written record replaces the human)
 
-- Present batches, assumptions, and lane count. **Nothing dispatches until
-  the user picks a batch** (same posture as goal-mode checkpoint 1).
+- **Interactive (default):** present batches, assumptions, and lane count.
+  **Nothing dispatches until the user picks a batch** (same posture as
+  goal-mode checkpoint 1).
+- **Unattended — only on an explicit mandate.** The run is unattended when the
+  user said so in the request ("разбери бэклог сам", "run unattended", an
+  autonomous `goal`/`loop` invocation that names this backlog) — never because
+  nobody answered. Silence is not a mandate. Then the checkpoint is not
+  skipped, it is **replaced by a written record**, and the record is bound by
+  four limits:
+  1. The dispatch ledger (`subagent-dispatch`) records, before any dispatch:
+     the candidate set, every batch with its independence assumptions, and
+     **what would have been put to the user** — which batch and why this
+     order, what was excluded and why.
+  2. **One batch per unattended run**, the smallest parallel-safe one, within
+     the lane cap (default 2, max 4). The next batch waits for a human.
+  3. **Checkpoint 2 stays human.** Nothing merges, pushes, or acts outward;
+     lanes end at reviewed, verified branches.
+  4. The substitution is declared in the report, first line:
+     `backlog-fleet: unattended — checkpoint 1 replaced by the written record
+     at <ledger path>`. Where the goal-mode gate file is in use, write
+     `.neyra/goal-mode.gate` = `approved — unattended, record: <ledger path>`
+     only after the record exists, so the deterministic backstop releases on
+     the record, not on a bare word.
 
 **Success criteria**
-- Dispatch happens only for an explicitly approved batch.
+- Interactive: dispatch happens only for an explicitly approved batch.
+- Unattended: the ledger holds the record *before* the first dispatch, one
+  batch ran, checkpoint 2 was left to a human, and the report opens with the
+  substitution line.
 
 ### 4. Dispatch across lanes
 
@@ -90,7 +114,10 @@ analysis contradicts it, pausing the batch instead of silently colliding.
 
 ## Rules
 
-- Opt-in only; the checkpoint is mandatory — no batch dispatches itself.
+- Opt-in only; the checkpoint is mandatory — no batch dispatches itself. In an
+  explicitly unattended run the checkpoint becomes a written record with a
+  one-batch limit and a human checkpoint 2; it is never silently dropped, and
+  an unattended run is never inferred from silence.
 - Independence assumptions are written before dispatch and are falsifiable
   during it; "we checked at planning time" is not a defense mid-flight.
 - One ticket per lane; a lane never adopts a sibling's scope to "help".
@@ -106,6 +133,12 @@ analysis contradicts it, pausing the batch instead of silently colliding.
   more than a pause; the user re-approves in one message.
 - "These tickets are obviously independent, skip the write-up." Unwritten
   assumptions can't expire, can't be re-checked, can't be re-approved.
+- "Nobody is at the keyboard, so I'll skip the checkpoint and go." Silence is
+  not a mandate. Without an explicit unattended request, wait; with one,
+  write the record first — the checkpoint is replaced, not removed.
+- "The run is unattended, so the whole backlog can go." One batch, the
+  smallest parallel-safe one, inside the lane cap; checkpoint 2 stays human.
+  Unattended widens who approves the first batch, not how much runs.
 
 ## Non-goals
 
@@ -116,5 +149,6 @@ mechanics themselves (parallel-lanes owns those).
 ## Verification
 
 The transcript shows: candidate set → written assumptions → explicit approval
+(or, unattended, the ledger record and the opening substitution line)
 → isolated lanes with flipped statuses → (if any conflict) a batch pause with
 re-approval → gated integration and one consolidated retro.
