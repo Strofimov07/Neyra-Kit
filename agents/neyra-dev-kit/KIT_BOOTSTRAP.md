@@ -68,6 +68,18 @@ session; a promoted lesson goes there, never inside the `neyra-dev-kit:begin/end
 block in AGENTS.md (that block is regenerated on install, so a lesson written in it
 is silently wiped on the next upgrade).
 
+## When a skill has no subagent here — the degraded gate
+
+Some skills fire under a different subagent name (`simplify-diff` → `code-reviewer`,
+`contract-safety` → `contract-checker`); five are manual and never auto-fire; the product
+profile or the install config may have left an agent out; a host may forbid spawning
+agents at all. None of that removes the gate. Read `agents/dev-skills/<skill>/SKILL.md`
+and run its protocol inline (or hand exactly that instruction to a general-purpose
+agent), then declare it in the report as `<skill>: run inline — <reason>`. Never skip it
+silently, and never present an inline run as the subagent's verdict: it ran without the
+subagent's tool restriction and model, and the reader must know that. The rows whose
+subagent differs or is absent in this repo are listed at the end of this bootstrap.
+
 ## Parallel agents — workspace isolation (mandatory)
 
 When two or more agents run in the same repo at the same time, each MUST have its

@@ -962,3 +962,40 @@ patched hook must not block every Stop.
 one step (`kit-manifest.py --write`, last), enforced by doctor. Minor bump: two new checks.
 Verified: `test-kit-manifest` (7) and `test-code-node` (3) green, doctor OK, install+doctor
 green on all four bundle profiles with "bundle integrity: ok" in each.
+
+## 2026-09-07 — The gate survives the absence of its subagent, and the map is shown before the first call (v0.49.0)
+
+**Context.** NEB-2279 §1: in a consumer, an agent compared the skills catalog (39) with
+`.claude/agents/` (36), concluded that nine skills had no subagent and dispatched
+`contract-safety` — which failed with "agent type not found". None of the nine was drift:
+five are manual by design and four fire under a different name (`contract-safety` →
+`contract-checker`, `localization-guard` → `localization-checker`, `security-review` →
+`security-reviewer`, `simplify-diff` → `code-reviewer`). The mapping table in the governance
+fragment says so, and the consumer's doctor already fails on a genuinely missing portable
+agent (v0.41.0) — but nothing put the map in front of the agent at the moment of dispatch,
+so it inferred drift from directory listings. The workaround it improvised, a
+general-purpose agent told to read the SKILL.md, produced real findings but ran without the
+subagent's tool restriction and model, and no rule said how that substitution must be
+declared. The 2026-08-23 signal is the same gap from the other side: a host that forbids
+spawning agents, a gate executed by hand, no way to record it.
+
+**Decision.** Two small pieces, no new mechanism. `check-skill-mapping.py --agents-status`
+derives from the same table the rows whose subagent is absent or differently named —
+renamed, manual, profile-deselected, not rendered at install, or MISSING (drift) — and the
+SessionStart hook injects them under the bootstrap, so the divergence is visible before the
+first call rather than after a failed one (Cursor keeps its static always-apply rule; the
+injection is Claude Code + Codex). `KIT_BOOTSTRAP` gains "the degraded gate": when a skill
+has no subagent here for any of those reasons, read its SKILL.md and run the protocol inline
+(or hand exactly that instruction to a general-purpose agent), declare it as `<skill>: run
+inline — <reason>`, and never present it as the subagent's verdict — the reader must know it
+ran without the tool restriction and the model. The transparency rule in `AGENTS.devkit.md`
+carries the same sentence for delegated and `/loop` runs. Generating subagents on upgrade
+(the ticket's other option) was rejected: the "missing" nine were not missing.
+
+**Consequence.** An agent sees at session start which rows differ and why, and a gate run
+by hand is a declared, auditable substitution instead of a silent one or a mis-labelled
+verdict. Minor bump: new bootstrap rule + new hook output. NEB-2279 §2 (an autonomous mode
+for backlog-fleet, replacing the human checkpoint with written assumptions) is a relaxation
+of a human gate and stays open for the owner's decision. Verified: `test-agents-status` (3)
+green, mapping and hook regressions green, doctor OK, install+doctor green on all four bundle
+profiles, Codex SessionStart smoke carries the map.
